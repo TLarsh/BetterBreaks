@@ -1,0 +1,177 @@
+from rest_framework import serializers
+from django.contrib.auth import authenticate
+from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday, WellbeingQuestion
+from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData
+from .validators import validate_password  
+from django.contrib.auth import get_user_model
+from uuid import UUID
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+    password_confirmation = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "password", "password_confirmation"]
+
+    def validate(self, data):
+        if data["password"] != data["password_confirmation"]:
+            raise serializers.ValidationError({"errors": ["Passwords do not match"]})
+        try:
+            validate_password(data["password"])
+        except ValueError as e:
+            raise serializers.ValidationError({"errors": [str(e)]})
+        return data
+
+    def create(self, validated_data):
+        return User.objects.create_user(
+            username=validated_data["username"],
+            email=validated_data["email"],
+            password=validated_data["password"],
+        )
+
+class LoginSerializer(serializers.Serializer):
+    """
+    Serializer for user login.
+    Accepts email or username and returns a token upon successful authentication.
+    """
+    email_or_username = serializers.CharField()
+    password = serializers.CharField()
+
+    def validate(self, data):
+        email_or_username = data["email_or_username"]
+        password = data["password"]
+
+        # Find user by email or username
+        user = None
+        if "@" in email_or_username:
+            user = User.objects.filter(email=email_or_username).first()
+        else:
+            user = User.objects.filter(username=email_or_username).first()
+
+        # Verify credentials
+        if user and user.check_password(password):
+            return {"user": user}
+        else:
+            raise serializers.ValidationError({"errors": ["Login failed"]})
+        
+
+class LogoutSerializer(serializers.Serializer):
+    token = serializers.CharField(required=True)
+
+    def validate_token(self, value):
+        try:
+            UUID(value)
+        except ValueError:
+            raise serializers.ValidationError("Invalid token format")
+        return value
+
+class UserSerializer(serializers.ModelSerializer):
+    """
+    Serializer for user profile data.
+    Returns user details for endpoints like /api/profile.
+    """
+    class Meta:
+        model = User
+        fields = [
+            "id",
+            "username",
+            "email",
+            "first_name",
+            "last_name",
+            "profile_picture_path",
+            "holiday_days",
+            "birthday",
+            "home_location_timezone",
+            "home_location_coordinates",
+            "working_days_per_week",
+        ]
+
+class DateEntrySerializer(serializers.ModelSerializer):
+    uuid = serializers.UUIDField(source="id")  # Include UUID in response
+    optimisation_score = serializers.FloatField()
+
+    class Meta:
+        model = DateEntry
+        fields = ["uuid", "start_date", "end_date", "title", "description", "optimisation_score"]
+
+class BlackoutDateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for blackout dates.
+    """
+    class Meta:
+        model = BlackoutDate
+        fields = "__all__"
+
+class WellbeingScoreSerializer(serializers.ModelSerializer):
+    """
+    Serializer for wellbeing scores.
+    Validates score is between 0-10.
+    """
+    class Meta:
+        model = WellbeingScore
+        fields = "__all__"
+
+    def validate_score(self, value):
+        if not 0 <= value <= 10:
+            raise serializers.ValidationError("Score must be between 0 and 10")
+        return value
+
+class UpdateSettingsSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating user settings.
+    """
+    class Meta:
+        model = UserSettings
+        fields = ["settings_json"]
+
+class ActionLogSerializer(serializers.Serializer):
+    """
+    Serializer for logging application actions.
+    """
+    application_area_name = serializers.CharField()
+    action_description = serializers.CharField()
+    action_duration_seconds = serializers.IntegerField()
+    token = serializers.UUIDField(required=False)  # Optional user token
+
+    def validate_action_duration_seconds(self, value):
+        if value < 0:
+            raise serializers.ValidationError("Duration cannot be negative")
+        return value
+    
+class OnboardingDataSerializer(serializers.ModelSerializer):
+    """
+    Serializer for onboarding data.
+    """
+    class Meta:
+        model = OnboardingData
+        fields = ["id", "survey_completion_date", "survey_results"]
+
+
+class PublicHolidaySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PublicHoliday
+        fields = ["id", "name", "date", "country_code"]
+
+
+class WellbeingQuestionSerializer(serializers.ModelSerializer):
+    """
+    Serializer for the WellbeingQuestion model.
+    """
+    class Meta:
+        model = WellbeingQuestion
+        fields = ["id", "question_text", "score_type"]
+
+class GamificationDataSerializer(serializers.ModelSerializer):
+    smart_planning_score = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = GamificationData
+        fields = [
+            "points",
+            "streak_days",
+            "badges",
+            "smart_planning_score"
+        ]
+        read_only_fields = ["points", "streak_days", "badges", "smart_planning_score"]
