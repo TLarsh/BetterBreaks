@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
+from rest_framework_simplejwt.tokens import RefreshToken
 import uuid
 
 class UserManager(BaseUserManager):
@@ -42,6 +43,13 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.username
+    
+    def tokens(self):
+        refresh = RefreshToken.for_user(self)
+        return{
+            'refresh': str(refresh),
+            'access': str(refresh.access_token)
+        }
 # User Settings Table
 
 class UserSettings(models.Model):
@@ -70,8 +78,9 @@ class LastLogin(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     login_date = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField()
-    client = models.ForeignKey("Client", on_delete=models.CASCADE)
-    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    client = models.ForeignKey("User", on_delete=models.CASCADE, related_name='login_event', related_query_name="login_event",)
+    # token = models.UUIDField(default=uuid.uuid4, unique=True)
+    token = models.CharField(max_length=512, unique=True)
     token_valid = models.BooleanField(default=True)
 
     def __str__(self):

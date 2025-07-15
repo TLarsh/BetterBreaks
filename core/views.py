@@ -3,6 +3,8 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from django.db.models import Avg
 from datetime import timedelta
 import random
@@ -69,52 +71,71 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data["user"]
-            try:
-                client = Client.objects.get(client_name="Application")
-            except Client.DoesNotExist:
-                return Response(
-                    {"errors": ["Client not found"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-                )
-            token = uuid.uuid4()
+            # try:
+            #     client = Client.objects.get(client_name="Application")
+            # except Client.DoesNotExist:
+            #     return Response(
+            #         {"errors": ["Client not found"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            #     )
+            tokens = user.tokens()
+            # token = uuid.uuid4()
             LastLogin.objects.create(
                 user=user,
-                client=client,
+                client=user,
                 ip_address=request.META.get("REMOTE_ADDR", ""),
-                token=token,
+                token=tokens["access"],
                 token_valid=True,
             )
+            print(tokens["access"])
             return Response(
-                {"tokenUuid": str(token)}, status=status.HTTP_200_OK
+                # {"tokenUuid": str(token)}, status=status.HTTP_200_OK
+                {
+                    "refresh": tokens["refresh"],
+                    "access":  tokens["access"],
+                    "email": user.email,
+                    "username": user.username,
+                }, status=status.HTTP_200_OK
             )
         return Response(
             {"errors": ["Login failed"]}, status=status.HTTP_200_OK
         )
 
 class LogoutView(APIView):
-    """Handle user logout by invalidating the token."""
+    """Handle user logout by blacklisting the refresh token."""
     permission_classes = [AllowAny]
+
     @swagger_auto_schema(request_body=LogoutSerializer)
-    
     def post(self, request):
-        token_str = request.data.get("token")
-        if not token_str:
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
             return Response(
-                {"errors": ["Token is required"]}, status=status.HTTP_400_BAD_REQUEST
+                {"errors": ["Refresh token is required"]},
+                status=status.HTTP_400_BAD_REQUEST
             )
+
         try:
-            token = uuid.UUID(token_str)
-            login_entry = LastLogin.objects.get(
-                token=token, token_valid=True
-            )
-            login_entry.token_valid = False
-            login_entry.save()
+            # Parse token to object
+            token_obj = RefreshToken(refresh_token)
+
+            # Optionally mark the token invalid in your DB
+            jti = token_obj["jti"]
+            LastLogin.objects.filter(token=jti).update(token_valid=False)
+
+            # Blacklist the token
+            token_obj.blacklist()
+
             return Response(status=status.HTTP_200_OK)
-        except (ValueError, LastLogin.DoesNotExist):
+
+        except TokenError as e:
             return Response(
-                {"errors": ["Invalid token"]}, status=status.HTTP_403_FORBIDDEN
+                {"errors": [str(e)]},
+                status=status.HTTP_400_BAD_REQUEST
             )
-        except Exception:
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except Exception as e:
+            return Response(
+                {"errors": ["Server error"]},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
 class DateListView(APIView):
     """Retrieve authenticated user's dates."""
@@ -136,6 +157,43 @@ class BookEventView(APIView):
             return Response({"success": True}, status=status.HTTP_200_OK)
         except DateEntry.DoesNotExist:
             return Response({"error": "Event not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+class LogoutView(APIView):
+    """Handle user logout by blacklisting the refresh token."""
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(request_body=LogoutSerializer)
+    def post(self, request):
+        refresh_token = request.data.get("refresh")
+        if not refresh_token:
+            return Response(
+                {"errors": ["Refresh token is required"]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Parse token to object
+            token_obj = RefreshToken(refresh_token)
+
+            # Optionally mark the token invalid in your DB
+            jti = token_obj["jti"]
+            LastLogin.objects.filter(token=jti).update(token_valid=False)
+
+            # Blacklist the token
+            token_obj.blacklist()
+
+            return Response(status=status.HTTP_200_OK)
+
+        except TokenError as e:
+            return Response(
+                {"errors": [str(e)]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            return Response(
+                {"errors": ["Server error"]},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
 class FetchPublicHolidaysView(APIView):
     def get(self, request):

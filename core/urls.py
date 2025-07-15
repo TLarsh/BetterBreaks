@@ -30,7 +30,7 @@ from rest_framework import permissions
 from .swagger_api_fe import schema_view
 schema_view = get_schema_view(
    openapi.Info(
-      title="Expense API",
+      title="Lifestyle Backend",
       default_version='v1',
       description="Lifestyle Backend",
       terms_of_service="https://www.google.com/policies/terms/",
