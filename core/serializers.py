@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
 from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday, WellbeingQuestion
 from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData
@@ -58,13 +59,19 @@ class LoginSerializer(serializers.Serializer):
         
 
 class LogoutSerializer(serializers.Serializer):
-    token = serializers.CharField(required=True)
+    # Expect the raw refresh token that the client received at login
+    refresh = serializers.CharField(required=True)
 
-    def validate_token(self, value):
+    def validate_refresh(self, value):
+        """
+        Ensure the string is a well‑formed, not‑yet‑expired refresh token.
+        `RefreshToken` throws `TokenError` on any problem (malformed,
+        signature mismatch, expired, blacklisted, etc.).
+        """
         try:
-            UUID(value)
-        except ValueError:
-            raise serializers.ValidationError("Invalid token format")
+            RefreshToken(value)
+        except TokenError:
+            raise serializers.ValidationError("Invalid or expired refresh token")
         return value
 
 class UserSerializer(serializers.ModelSerializer):
