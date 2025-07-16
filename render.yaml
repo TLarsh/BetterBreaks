@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: django-api
+    env: python
+    plan: free # or 'starter' or 'pro' as needed
+    buildCommand: |
+      pip install -r requirements.txt
+    startCommand: |
+      gunicorn lifestyle_backend.wsgi:application --bind 0.0.0.0:$PORT
+      envVars:
+      - key: PYTHON_VERSION
+        value: 3.10
+    # envVars:
+    #   - key: DJANGO_SETTINGS_MODULE
+    #     value: lifestyle_backend.settings
+    #   - key: SECRET_KEY
+    #     value: your-django-secret-key
+    #   - key: DEBUG
+    #     value: "False"
+    #   - key: ALLOWED_HOSTS
+    #     value: *
+    #   - key: DATABASE_URL
+    #     fromDatabase:
+    #       name: your-postgres-db-name
+    #       property: connectionString
+    #   - key: EMAIL_BACKEND
+    #     value: django.core.mail.backends.smtp.EmailBackend
+    #   - key: EMAIL_HOST
+    #     value: smtp.gmail.com
+    #   - key: EMAIL_PORT
+    #     value: "465"
+    #   - key: EMAIL_USE_TLS
+    #     value: "True"
+    #   - key: EMAIL_HOST_USER
+    #     value: your-email@example.com
+    #   - key: EMAIL_HOST_PASSWORD
+    #     value: pektreform@gmail.com
+    #   - key: STATIC_ROOT
+    #     value: staticfiles
+    staticPublishPath: staticfiles
+    buildFilter:
+      paths: ["lifestyle_backend", "manage.py"]
+
