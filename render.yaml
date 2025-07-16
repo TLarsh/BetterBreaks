@@ -10,6 +10,12 @@ services:
       envVars:
       - key: PYTHON_VERSION
         value: 3.10
+      - key: DJANGO_SETTINGS_MODULE
+        value: lifestyle_backend.settings.production  # Change to your actual settings
+      - key: SECRET_KEY
+        sync: false
+      - key: DEBUG
+        value: False
     # envVars:
     #   - key: DJANGO_SETTINGS_MODULE
     #     value: lifestyle_backend.settings
