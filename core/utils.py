@@ -187,10 +187,13 @@ def adjust_score_based_on_weather(score, weather_data):
 def send_otp_email(email, otp):
     subject = "Your Password Reset OTP"
     message = f"Your OTP for password reset is: {otp}"
+    from_email = settings.EMAIL_HOST_USER  # Use the sender from .env settings
+    recipient_list = [email]
+
     send_mail(
         subject,
         message,
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
+        from_email,
+        recipient_list,
         fail_silently=False,
     )
