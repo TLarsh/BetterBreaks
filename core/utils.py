@@ -1,6 +1,7 @@
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from django.conf import settings
+from django.core.mail import send_mail
 import requests
 from datetime import datetime
 from datetime import timedelta
@@ -178,3 +179,18 @@ def adjust_score_based_on_weather(score, weather_data):
         score -= 15  # Penalize extreme temperatures
 
     return max(score, 0)  # Ensure score doesn't go below 0
+
+
+
+# -------------------SEND EMAIL ------------
+
+def send_otp_email(email, otp):
+    subject = "Your Password Reset OTP"
+    message = f"Your OTP for password reset is: {otp}"
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [email],
+        fail_silently=False,
+    )

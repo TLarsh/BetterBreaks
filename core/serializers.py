@@ -2,9 +2,12 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
 from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday, WellbeingQuestion
-from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData
-from .validators import validate_password  
+from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP
+from .validators import validate_password
+from django.contrib.auth.hashers import make_password 
 from django.contrib.auth import get_user_model
+from core.utils import send_otp_email
+import random
 from uuid import UUID
 
 
@@ -94,6 +97,72 @@ class UserSerializer(serializers.ModelSerializer):
             "home_location_coordinates",
             "working_days_per_week",
         ]
+
+
+# Request password reset otp serializer ________
+
+class RequestOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, value):
+        if not User.objects.filter(email=value).exists():
+            raise serializers.ValidationError("No user found with this email.")
+        return value
+
+    def create(self, validated_data):
+        otp = f"{random.randint(100000, 999999)}"
+        email = validated_data['email']
+        PasswordResetOTP.objects.create(email=email, otp=otp)
+        send_otp_email(email, otp)
+        return {"email": email, "otp_sent": True}
+
+# Verify Email OTP Serializer________________/
+
+class VerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+
+    def validate(self, data):
+        try:
+            record = PasswordResetOTP.objects.filter(
+                email=data["email"], otp=data["otp"], is_verified=False
+            ).latest("created_at")
+        except PasswordResetOTP.DoesNotExist:
+            raise serializers.ValidationError("Invalid or expired OTP")
+
+        if record.is_expired():
+            raise serializers.ValidationError("OTP has expired.")
+
+        self.instance = record
+        return data
+
+    def save(self):
+        self.instance.is_verified = True
+        self.instance.save()
+
+
+# Reset Password Serializer___________________/
+
+class ResetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(min_length=6)
+
+    def validate(self, data):
+        try:
+            otp_obj = PasswordResetOTP.objects.filter(
+                email=data["email"], otp=data["otp"], is_verified=True
+            ).latest("created_at")
+        except PasswordResetOTP.DoesNotExist:
+            raise serializers.ValidationError("Invalid or unverified OTP.")
+
+        self.user = User.objects.get(email=data["email"])
+        return data
+
+    def save(self):
+        self.user.password = make_password(self.validated_data["new_password"])
+        self.user.save()
+
 
 class DateEntrySerializer(serializers.ModelSerializer):
     uuid = serializers.UUIDField(source="id")  # Include UUID in response

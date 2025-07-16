@@ -14,6 +14,9 @@ from .serializers import (
     RegisterSerializer,
     LoginSerializer,
     LogoutSerializer,
+    RequestOTPSerializer,
+    VerifyOTPSerializer,
+    ResetPasswordSerializer,
     UserSerializer,
     DateEntrySerializer,
     BlackoutDateSerializer,
@@ -137,6 +140,34 @@ class LogoutView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
+class RequestOTPView(APIView):
+    @swagger_auto_schema(request_body=RequestOTPSerializer)
+    def post(self, request):
+        serializer = RequestOTPSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "OTP sent to your email."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VerifyOTPView(APIView):
+    @swagger_auto_schema(request_body=VerifyOTPSerializer)
+    def post(self, request):
+        serializer = VerifyOTPSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "OTP verified successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+class ResetPasswordView(APIView):
+    @swagger_auto_schema(request_body=ResetPasswordSerializer)
+    def post(self, request):
+        serializer = ResetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class DateListView(APIView):
     """Retrieve authenticated user's dates."""
     def get(self, request):

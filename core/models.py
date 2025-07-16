@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.utils import timezone
 import uuid
 
 class UserManager(BaseUserManager):
@@ -85,6 +86,18 @@ class LastLogin(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.login_date}"
+
+
+# Password Reset Table
+class PasswordResetOTP(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField()
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_verified = models.BooleanField(default=False)
+
+    def is_expired(self):
+        return timezone.now() > self.created_at + timezone.timedelta(minutes=10)
     
 # Dates Table 
 class DateEntry(models.Model):

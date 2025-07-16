@@ -3,6 +3,9 @@ from .views import (
     RegisterView,
     LoginView,
     LogoutView,
+    RequestOTPView,
+    VerifyOTPView,
+    ResetPasswordView,
     DateListView,
     BlackoutDatesView,
     ProfileView,
@@ -48,6 +51,9 @@ urlpatterns = [
     path('api/register/', RegisterView.as_view(), name='register'),  # Ensure 'register' matches test
     path('api/login/', LoginView.as_view(), name='login'),          # Ensure 'login' matches test
     path('api/logout/', LogoutView.as_view(), name='logout'),      # Ensure 'logout' matches test
+    path('auth/request-reset/', RequestOTPView.as_view()),
+    path('auth/verify-otp/', VerifyOTPView.as_view()),
+    path('auth/reset-password/', ResetPasswordView.as_view()),
     path('api/dates/', DateListView.as_view(), name='dates'),       # Ensure 'dates' matches test
     path('api/blackout-dates/', BlackoutDatesView.as_view(), name='blackout_dates'),
     path('api/profile/', ProfileView.as_view(), name='profile'),
