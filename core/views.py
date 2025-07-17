@@ -150,6 +150,7 @@ class LogoutView(APIView):
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )        
 
+
 class RequestOTPView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
@@ -159,8 +160,17 @@ class RequestOTPView(APIView):
         serializer = RequestOTPSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "OTP sent to your email."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return success_response(
+                message="OTP sent to your email.",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
+        return error_response(
+            message="Failed to send OTP",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
 
 class VerifyOTPView(APIView):
     authentication_classes = []
@@ -171,8 +181,17 @@ class VerifyOTPView(APIView):
         serializer = VerifyOTPSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "OTP verified successfully."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return success_response(
+                message="OTP verified successfully.",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
+        return error_response(
+            message="OTP verification failed",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
 
 class ResetPasswordView(APIView):
     authentication_classes = []
@@ -183,9 +202,16 @@ class ResetPasswordView(APIView):
         serializer = ResetPasswordSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+            return success_response(
+                message="Password reset successful.",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
+        return error_response(
+            message="Password reset failed",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
 class DateListView(APIView):
     """Retrieve authenticated user's dates."""
     def get(self, request):
