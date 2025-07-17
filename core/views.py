@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import AllowAny
+from rest_framework.authentication import BasicAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from django.db.models import Avg
@@ -140,7 +141,11 @@ class LogoutView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
         
+
 class RequestOTPView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     @swagger_auto_schema(request_body=RequestOTPSerializer)
     def post(self, request):
         serializer = RequestOTPSerializer(data=request.data)
@@ -150,6 +155,9 @@ class RequestOTPView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class VerifyOTPView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     @swagger_auto_schema(request_body=VerifyOTPSerializer)
     def post(self, request):
         serializer = VerifyOTPSerializer(data=request.data)
@@ -157,8 +165,11 @@ class VerifyOTPView(APIView):
             serializer.save()
             return Response({"message": "OTP verified successfully."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+
 class ResetPasswordView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     @swagger_auto_schema(request_body=ResetPasswordSerializer)
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
@@ -166,7 +177,6 @@ class ResetPasswordView(APIView):
             serializer.save()
             return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
 
 class DateListView(APIView):
     """Retrieve authenticated user's dates."""
@@ -178,6 +188,8 @@ class DateListView(APIView):
         dates = DateEntry.objects.filter(user=request.user)
         serializer = DateEntrySerializer(dates, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 
 class BookEventView(APIView):
     @swagger_auto_schema(request_body=DateEntrySerializer)
@@ -203,14 +215,14 @@ class LogoutView(APIView):
             )
 
         try:
-            # Parse token to object
+        
             token_obj = RefreshToken(refresh_token)
 
-            # Optionally mark the token invalid in your DB
+            
             jti = token_obj["jti"]
             LastLogin.objects.filter(token=jti).update(token_valid=False)
 
-            # Blacklist the token
+            
             token_obj.blacklist()
 
             return Response(status=status.HTTP_200_OK)
