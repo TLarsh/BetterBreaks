@@ -44,7 +44,7 @@ from .models import (
 
 )
 import uuid
-from .utils import create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather
+from .utils import create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response
 from drf_yasg.utils import swagger_auto_schema
 
 User = get_user_model()  # Ensure your custom user model is properly configured
@@ -75,14 +75,9 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data["user"]
-            # try:
-            #     client = Client.objects.get(client_name="Application")
-            # except Client.DoesNotExist:
-            #     return Response(
-            #         {"errors": ["Client not found"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            #     )
+
             tokens = user.tokens()
-            # token = uuid.uuid4()
+
             LastLogin.objects.create(
                 user=user,
                 client=user,
@@ -90,20 +85,22 @@ class LoginView(APIView):
                 token=tokens["access"],
                 token_valid=True,
             )
-            print(tokens["access"])
-            return Response(
-                # {"tokenUuid": str(token)}, status=status.HTTP_200_OK
-                {
+
+            return success_response(
+                message="Login successful",
+                data={
                     "refresh": tokens["refresh"],
-                    "access":  tokens["access"],
+                    "access": tokens["access"],
                     "email": user.email,
                     "username": user.username,
-                }, status=status.HTTP_200_OK
+                }
             )
-        return Response(
-            {"errors": ["Login failed"]}, status=status.HTTP_200_OK
-        )
 
+        return error_response(
+            message="Login failed",
+            errors=serializer.errors
+        )
+        
 class LogoutView(APIView):
     """Handle user logout by blacklisting the refresh token."""
     permission_classes = [AllowAny]
