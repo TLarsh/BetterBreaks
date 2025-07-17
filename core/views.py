@@ -52,21 +52,27 @@ User = get_user_model()  # Ensure your custom user model is properly configured
 
 class RegisterView(APIView):
     """Handle user registration with password validation."""
-    permission_classes = [AllowAny]  # Public access allowed
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(request_body=RegisterSerializer)
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            return Response(
-                {"success": True}, status=status.HTTP_201_CREATED
+            return success_response(
+                message="Registration successful",
+                data={
+                    "email": user.email,
+                    "username": user.username
+                },
+                status_code=status.HTTP_201_CREATED
             )
-        return Response(
-            {"errors": list(serializer.errors.values())},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
 
+        return error_response(
+            message="Registration failed",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+)
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -101,6 +107,7 @@ class LoginView(APIView):
             errors=serializer.errors
         )
         
+
 class LogoutView(APIView):
     """Handle user logout by blacklisting the refresh token."""
     permission_classes = [AllowAny]
@@ -109,35 +116,39 @@ class LogoutView(APIView):
     def post(self, request):
         refresh_token = request.data.get("refresh")
         if not refresh_token:
-            return Response(
-                {"errors": ["Refresh token is required"]},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                message="Refresh token is required",
+                errors={"refresh": ["Refresh token is required"]},
+                status_code=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            # Parse token to object
             token_obj = RefreshToken(refresh_token)
 
-            # Optionally mark the token invalid in your DB
             jti = token_obj["jti"]
             LastLogin.objects.filter(token=jti).update(token_valid=False)
 
-            # Blacklist the token
             token_obj.blacklist()
 
-            return Response(status=status.HTTP_200_OK)
+            return success_response(
+                message="Logout successful",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
 
         except TokenError as e:
-            return Response(
-                {"errors": [str(e)]},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                message="Invalid token",
+                errors={"refresh": [str(e)]},
+                status_code=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as e:
-            return Response(
-                {"errors": ["Server error"]},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
+
+        except Exception:
+            return error_response(
+                message="Server error",
+                errors={"non_field_errors": ["An unexpected error occurred"]},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )        
 
 class RequestOTPView(APIView):
     authentication_classes = []
