@@ -32,16 +32,17 @@ from drf_yasg import openapi
 from rest_framework import permissions
 from .swagger_api_fe import schema_view
 schema_view = get_schema_view(
-   openapi.Info(
-      title="Lifestyle Backend",
-      default_version='v1',
-      description="Lifestyle Backend",
-      terms_of_service="https://www.google.com/policies/terms/",
-      contact=openapi.Contact(email="contact@example.com"),
-      license=openapi.License(name="BSD License"),
-   ),
-   public=True,
-   permission_classes=(permissions.AllowAny,),
+    openapi.Info(
+        title="BetterBreaks",
+        default_version='v1',
+        description="BetterBreaks Backend",
+        terms_of_service="https://testing.betterbreaks.org",
+        contact=openapi.Contact(email="support@betterbreaks.org"),
+        license=openapi.License(name="Proprietary"),
+    ),
+    url="https://api.betterbreaks.org/",
+    public=True,
+    permission_classes=(permissions.AllowAny,),
 )
 
 

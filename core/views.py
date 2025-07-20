@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from rest_framework.permissions import AllowAny
+from rest_framework.authentication import BasicAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from django.db.models import Avg
@@ -43,7 +44,7 @@ from .models import (
 
 )
 import uuid
-from .utils import create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather
+from .utils import create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response
 from drf_yasg.utils import swagger_auto_schema
 
 User = get_user_model()  # Ensure your custom user model is properly configured
@@ -51,21 +52,27 @@ User = get_user_model()  # Ensure your custom user model is properly configured
 
 class RegisterView(APIView):
     """Handle user registration with password validation."""
-    permission_classes = [AllowAny]  # Public access allowed
+    permission_classes = [AllowAny]
 
     @swagger_auto_schema(request_body=RegisterSerializer)
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            return Response(
-                {"success": True}, status=status.HTTP_201_CREATED
+            return success_response(
+                message="Registration successful",
+                data={
+                    "email": user.email,
+                    "username": user.username
+                },
+                status_code=status.HTTP_201_CREATED
             )
-        return Response(
-            {"errors": list(serializer.errors.values())},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
 
+        return error_response(
+            message="Registration failed",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+)
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -74,14 +81,9 @@ class LoginView(APIView):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.validated_data["user"]
-            # try:
-            #     client = Client.objects.get(client_name="Application")
-            # except Client.DoesNotExist:
-            #     return Response(
-            #         {"errors": ["Client not found"]}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            #     )
+
             tokens = user.tokens()
-            # token = uuid.uuid4()
+
             LastLogin.objects.create(
                 user=user,
                 client=user,
@@ -89,19 +91,22 @@ class LoginView(APIView):
                 token=tokens["access"],
                 token_valid=True,
             )
-            print(tokens["access"])
-            return Response(
-                # {"tokenUuid": str(token)}, status=status.HTTP_200_OK
-                {
+
+            return success_response(
+                message="Login successful",
+                data={
                     "refresh": tokens["refresh"],
-                    "access":  tokens["access"],
+                    "access": tokens["access"],
                     "email": user.email,
                     "username": user.username,
-                }, status=status.HTTP_200_OK
+                }
             )
-        return Response(
-            {"errors": ["Login failed"]}, status=status.HTTP_200_OK
+
+        return error_response(
+            message="Login failed",
+            errors=serializer.errors
         )
+        
 
 class LogoutView(APIView):
     """Handle user logout by blacklisting the refresh token."""
@@ -111,63 +116,102 @@ class LogoutView(APIView):
     def post(self, request):
         refresh_token = request.data.get("refresh")
         if not refresh_token:
-            return Response(
-                {"errors": ["Refresh token is required"]},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                message="Refresh token is required",
+                errors={"refresh": ["Refresh token is required"]},
+                status_code=status.HTTP_400_BAD_REQUEST
             )
 
         try:
-            # Parse token to object
             token_obj = RefreshToken(refresh_token)
 
-            # Optionally mark the token invalid in your DB
             jti = token_obj["jti"]
             LastLogin.objects.filter(token=jti).update(token_valid=False)
 
-            # Blacklist the token
             token_obj.blacklist()
 
-            return Response(status=status.HTTP_200_OK)
+            return success_response(
+                message="Logout successful",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
 
         except TokenError as e:
-            return Response(
-                {"errors": [str(e)]},
-                status=status.HTTP_400_BAD_REQUEST
+            return error_response(
+                message="Invalid token",
+                errors={"refresh": [str(e)]},
+                status_code=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as e:
-            return Response(
-                {"errors": ["Server error"]},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-        
+
+        except Exception:
+            return error_response(
+                message="Server error",
+                errors={"non_field_errors": ["An unexpected error occurred"]},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )        
+
+
 class RequestOTPView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     @swagger_auto_schema(request_body=RequestOTPSerializer)
     def post(self, request):
         serializer = RequestOTPSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "OTP sent to your email."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return success_response(
+                message="OTP sent to your email.",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
+        return error_response(
+            message="Failed to send OTP",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
 
 class VerifyOTPView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     @swagger_auto_schema(request_body=VerifyOTPSerializer)
     def post(self, request):
         serializer = VerifyOTPSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "OTP verified successfully."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
+            return success_response(
+                message="OTP verified successfully.",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
+        return error_response(
+            message="OTP verification failed",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+
 class ResetPasswordView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
     @swagger_auto_schema(request_body=ResetPasswordSerializer)
     def post(self, request):
         serializer = ResetPasswordSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Password reset successful."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+            return success_response(
+                message="Password reset successful.",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
+        return error_response(
+            message="Password reset failed",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
 class DateListView(APIView):
     """Retrieve authenticated user's dates."""
     def get(self, request):
@@ -178,6 +222,8 @@ class DateListView(APIView):
         dates = DateEntry.objects.filter(user=request.user)
         serializer = DateEntrySerializer(dates, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 
 class BookEventView(APIView):
     @swagger_auto_schema(request_body=DateEntrySerializer)
@@ -203,14 +249,14 @@ class LogoutView(APIView):
             )
 
         try:
-            # Parse token to object
+        
             token_obj = RefreshToken(refresh_token)
 
-            # Optionally mark the token invalid in your DB
+            
             jti = token_obj["jti"]
             LastLogin.objects.filter(token=jti).update(token_valid=False)
 
-            # Blacklist the token
+            
             token_obj.blacklist()
 
             return Response(status=status.HTTP_200_OK)
