@@ -40,7 +40,7 @@ schema_view = get_schema_view(
         contact=openapi.Contact(email="support@betterbreaks.org"),
         license=openapi.License(name="Proprietary"),
     ),
-    url="https://api.betterbreaks.org/",
+    #url="https://lifestyle-backend-4klf.onrender.com/",
     public=True,
     permission_classes=(permissions.AllowAny,),
 )
