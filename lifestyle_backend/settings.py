@@ -182,8 +182,8 @@ SWAGGER_SETTINGS = {
             'in': 'header'
         }
     },
-    #'DEFAULT_API_URL': 'https://api.betterbreaks.org',  # <- Add your API domain
-}
+    }
+#'DEFAULT_API_URL': 'https://api.betterbreaks.org',  # <- Add your API domain
 
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
