@@ -174,6 +174,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Swagger API Documentation Settings
 
 SWAGGER_SETTINGS = {
+    'USE_SESSION_AUTH': False,
     'SECURITY_DEFINITIONS': {
         'Bearer': {
             'type': 'apiKey',
@@ -181,10 +182,8 @@ SWAGGER_SETTINGS = {
             'in': 'header'
         }
     },
-    'USE_SESSION_AUTH': False,
-    'SECURITY_DEFINITIONS': None,
+    'DEFAULT_API_URL': 'https://api.betterbreaks.org',  # <- Add your API domain
 }
-
 
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
