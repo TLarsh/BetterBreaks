@@ -182,7 +182,7 @@ SWAGGER_SETTINGS = {
             'in': 'header'
         }
     },
-    'DEFAULT_API_URL': 'https://api.betterbreaks.org',  # <- Add your API domain
+    #'DEFAULT_API_URL': 'https://api.betterbreaks.org',  # <- Add your API domain
 }
 
 
