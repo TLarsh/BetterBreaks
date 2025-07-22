@@ -40,7 +40,7 @@ schema_view = get_schema_view(
         contact=openapi.Contact(email="support@betterbreaks.org"),
         license=openapi.License(name="Proprietary"),
     ),
-    url="https://api.betterbreaks.org/",
+    
     public=True,
     permission_classes=(permissions.AllowAny,),
 )
@@ -59,8 +59,8 @@ urlpatterns = [
     # path('api/blackout-dates/', BlackoutDatesView.as_view(), name='blackout_dates'),
     path('api/profile/', ProfileView.as_view(), name='profile'),
     # path('api/update-wellbeing/', UpdateWellbeingView.as_view(), name='update_wellbeing'),
-    # path('api/log-action/', LogActionView.as_view(), name='log_action'),
-    # path('api/update-profile/', UpdateProfileView.as_view(), name='update_profile'),
+    path('api/log-action/', LogActionView.as_view(), name='log_action'),
+    path('api/update-profile/', UpdateProfileView.as_view(), name='update_profile'),
     # path('api/update-settings/', UpdateSettingsView.as_view(), name='update_settings'),
     path('api/settings/', GetSettingsView.as_view(), name='get_settings'),
     # path('api/onboarding/', GetOnboardingDataView.as_view(), name='get_onboarding_data'),
@@ -70,6 +70,7 @@ urlpatterns = [
     path("optimization-score/", OptimizationScoreView.as_view(), name="optimization-score"),
     # path("gamification-data/", GamificationDataView.as_view(), name="gamification-data"),
     # path("suggested-dates/", SuggestedDatesView.as_view(), name="suggested-dates"),
+    path("add-date/", AddDateView.as_view(), name="add-date"),
 
 ]
 

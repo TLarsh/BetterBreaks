@@ -165,12 +165,13 @@ class ResetPasswordSerializer(serializers.Serializer):
 
 
 class DateEntrySerializer(serializers.ModelSerializer):
-    uuid = serializers.UUIDField(source="id")  # Include UUID in response
+    # uuid = serializers.UUIDField(source="id")  # Include UUID in response
     optimisation_score = serializers.FloatField()
 
     class Meta:
         model = DateEntry
-        fields = ["uuid", "start_date", "end_date", "title", "description", "optimisation_score"]
+        fields = ["start_date", "end_date", "title", "description", "optimisation_score"]
+        # fields = ["uuid", "start_date", "end_date", "title", "description", "optimisation_score"]
 
 class BlackoutDateSerializer(serializers.ModelSerializer):
     """

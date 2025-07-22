@@ -687,6 +687,7 @@ class SuggestedDatesView(APIView):
     
 
 class AddDateView(APIView):
+    @swagger_auto_schema(request_body=DateEntrySerializer)
     def post(self, request):
         if not request.user.is_authenticated:
             return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
