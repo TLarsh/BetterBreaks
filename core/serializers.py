@@ -294,26 +294,28 @@ class BreakPlanSerializer(serializers.ModelSerializer):
             })
         return attrs
 
+        # -----------------
 
 class BreakPlanListSerializer(serializers.ModelSerializer):
     daysCount = serializers.SerializerMethodField()
     daysRemaining = serializers.SerializerMethodField()
-    createdAt = serializers.DateTimeField(source="created_at")
-    updatedAt = serializers.DateTimeField(source="updated_at")
 
     class Meta:
         model = BreakPlan
         fields = [
-            "id", "startDate", "endDate", "description",
-            "type", "status", "daysCount", "daysRemaining",
-            "created_at", "updated_at"
+            "id", "startDate", "endDate", "description", "type", "status",
+            "daysCount", "daysRemaining", "created_at", "updated_at"
         ]
 
     def get_daysCount(self, obj):
-        return (obj.endDate - obj.startDate).days + 1
+        try:
+            return (obj.endDate.date() - obj.startDate.date()).days + 1
+        except Exception:
+            return 0
 
     def get_daysRemaining(self, obj):
-        today = datetime.now(timezone.utc).date()
-        if obj.endDate.date() < today:
+        try:
+            today = date.today()
+            return max((obj.endDate.date() - today).days, 0)
+        except Exception:
             return 0
-        return (obj.endDate.date() - max(today, obj.startDate.date())).days + 1

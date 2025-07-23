@@ -16,6 +16,7 @@ from dateutil import parser as date_parser
 import random
 from django.utils import timezone
 from django.utils.timezone import now
+from datetime import datetime, timezone
 from .validators import validate_password
 from .serializers import (
     RegisterSerializer,
@@ -890,9 +891,7 @@ class ListUserBreakPlansView(APIView):
             if year_param:
                 try:
                     year = int(year_param)
-                    plans_qs = plans_qs.filter(
-                        startDate__year=year
-                    )
+                    plans_qs = plans_qs.filter(startDate__year=year)
                 except ValueError:
                     return Response({
                         "message": "Invalid year format.",
@@ -902,9 +901,9 @@ class ListUserBreakPlansView(APIView):
                     }, status=status.HTTP_400_BAD_REQUEST)
 
             # Order newest first
-            plans_qs = plans_qs.order_by("-createdAt")
+            plans_qs = plans_qs.order_by("-created_at")
 
-            # Pagination
+            # Pagination setup
             limit = int(limit) if limit else 10
             offset = int(offset) if offset else 0
 
@@ -924,29 +923,15 @@ class ListUserBreakPlansView(APIView):
                 }, status=status.HTTP_200_OK)
 
             current_page = paginator.page(page_number)
-            plans = []
 
-            for plan in current_page.object_list:
-                days_count = (plan.endDate - plan.startDate).days + 1
-                days_remaining = (plan.endDate - datetime.now().date()).days
-                plans.append({
-                    "id": str(plan.id),
-                    "startDate": plan.startDate,
-                    "endDate": plan.endDate,
-                    "description": plan.description,
-                    "type": plan.type,
-                    "status": plan.status,
-                    "daysCount": days_count,
-                    "daysRemaining": max(0, days_remaining),
-                    "created_at": plan.created_at,
-                    "updated_at": plan.updated_at
-                })
+            # Serialize data
+            serialized = BreakPlanListSerializer(current_page.object_list, many=True)
 
             return Response({
                 "message": "Break plans retrieved successfully.",
                 "status": True,
                 "data": {
-                    "plans": plans,
+                    "plans": serialized.data,
                     "total": paginator.count,
                     "hasMore": current_page.has_next()
                 },
