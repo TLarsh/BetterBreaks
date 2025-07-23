@@ -8,6 +8,7 @@ from django.contrib.auth.hashers import make_password
 from django.contrib.auth import get_user_model
 from core.utils import send_otp_email
 import random
+from datetime import datetime, timezone
 from uuid import UUID
 
 
@@ -292,3 +293,27 @@ class BreakPlanSerializer(serializers.ModelSerializer):
                 "endDate": "End date must be after start date."
             })
         return attrs
+
+
+class BreakPlanListSerializer(serializers.ModelSerializer):
+    daysCount = serializers.SerializerMethodField()
+    daysRemaining = serializers.SerializerMethodField()
+    createdAt = serializers.DateTimeField(source="created_at")
+    updatedAt = serializers.DateTimeField(source="updated_at")
+
+    class Meta:
+        model = BreakPlan
+        fields = [
+            "id", "startDate", "endDate", "description",
+            "type", "status", "daysCount", "daysRemaining",
+            "createdAt", "updatedAt"
+        ]
+
+    def get_daysCount(self, obj):
+        return (obj.endDate - obj.startDate).days + 1
+
+    def get_daysRemaining(self, obj):
+        today = datetime.now(timezone.utc).date()
+        if obj.endDate.date() < today:
+            return 0
+        return (obj.endDate.date() - max(today, obj.startDate.date())).days + 1

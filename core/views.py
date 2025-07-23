@@ -2,13 +2,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import BasicAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models import Q
+from django.core.paginator import Paginator
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from rest_framework.permissions import IsAuthenticated
 from django.db.models import Avg
 from datetime import timedelta
 from dateutil import parser as date_parser
@@ -35,6 +36,7 @@ from .serializers import (
     GamificationDataSerializer,
 
     BreakPlanSerializer,
+    BreakPlanListSerializer,
 )
 from .models import (
     LastLogin,
@@ -49,10 +51,14 @@ from .models import (
     GamificationData,
     WellbeingQuestion,
 
+    BreakPlan
+
 )
 import uuid
 from .utils import create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response
 from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+
 
 User = get_user_model()  # Ensure your custom user model is properly configured
 
@@ -837,3 +843,120 @@ class CreateBreakPlanView(APIView):
             "data": None,
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ListUserBreakPlansView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'status', openapi.IN_QUERY,
+                description="Status of the break plan (planned|pending|approved|rejected)",
+                type=openapi.TYPE_STRING
+            ),
+            openapi.Parameter(
+                'year', openapi.IN_QUERY,
+                description="Year to filter break plans by start date",
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'limit', openapi.IN_QUERY,
+                description="Number of items per page",
+                type=openapi.TYPE_INTEGER
+            ),
+            openapi.Parameter(
+                'offset', openapi.IN_QUERY,
+                description="Offset for pagination (default 0)",
+                type=openapi.TYPE_INTEGER
+            )
+        ]
+    )
+    def get(self, request):
+        user = request.user
+        status_param = request.query_params.get("status")
+        year_param = request.query_params.get("year")
+        limit = request.query_params.get("limit")
+        offset = request.query_params.get("offset")
+
+        try:
+            # Initial Query
+            plans_qs = BreakPlan.objects.filter(user=user)
+
+            # Optional filters
+            if status_param:
+                plans_qs = plans_qs.filter(status=status_param)
+
+            if year_param:
+                try:
+                    year = int(year_param)
+                    plans_qs = plans_qs.filter(
+                        startDate__year=year
+                    )
+                except ValueError:
+                    return Response({
+                        "message": "Invalid year format.",
+                        "status": False,
+                        "data": None,
+                        "errors": {"year": ["Must be a valid integer"]}
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Order newest first
+            plans_qs = plans_qs.order_by("-createdAt")
+
+            # Pagination
+            limit = int(limit) if limit else 10
+            offset = int(offset) if offset else 0
+
+            paginator = Paginator(plans_qs, limit)
+            page_number = (offset // limit) + 1
+
+            if page_number > paginator.num_pages:
+                return Response({
+                    "message": "No more results.",
+                    "status": True,
+                    "data": {
+                        "plans": [],
+                        "total": paginator.count,
+                        "hasMore": False
+                    },
+                    "errors": None
+                }, status=status.HTTP_200_OK)
+
+            current_page = paginator.page(page_number)
+            plans = []
+
+            for plan in current_page.object_list:
+                days_count = (plan.endDate - plan.startDate).days + 1
+                days_remaining = (plan.endDate - datetime.now().date()).days
+                plans.append({
+                    "id": str(plan.id),
+                    "startDate": plan.startDate,
+                    "endDate": plan.endDate,
+                    "description": plan.description,
+                    "type": plan.type,
+                    "status": plan.status,
+                    "daysCount": days_count,
+                    "daysRemaining": max(0, days_remaining),
+                    "created_at": plan.created_at,
+                    "updated_at": plan.updated_at
+                })
+
+            return Response({
+                "message": "Break plans retrieved successfully.",
+                "status": True,
+                "data": {
+                    "plans": plans,
+                    "total": paginator.count,
+                    "hasMore": current_page.has_next()
+                },
+                "errors": None
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                "message": "An unexpected error occurred.",
+                "status": False,
+                "data": None,
+                "errors": {"server": [str(e)]}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

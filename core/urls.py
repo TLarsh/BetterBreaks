@@ -26,7 +26,8 @@ from .views import (
     AddBlackoutDateView,
     DeleteBlackoutDateView,
     WellbeingQuestionView,
-    CreateBreakPlanView
+    CreateBreakPlanView,
+    ListUserBreakPlansView
 )
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -77,6 +78,7 @@ urlpatterns = [
 
 
     path("api/breaks/plan", CreateBreakPlanView.as_view(), name="create-break-plan"),
+    path("api/breaks/plans", ListUserBreakPlansView.as_view(), name="list-break-plans"),
 
 ]
 
