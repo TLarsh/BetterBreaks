@@ -306,7 +306,7 @@ class BreakPlanListSerializer(serializers.ModelSerializer):
         fields = [
             "id", "startDate", "endDate", "description",
             "type", "status", "daysCount", "daysRemaining",
-            "createdAt", "updatedAt"
+            "created_at", "updated_at"
         ]
 
     def get_daysCount(self, obj):
