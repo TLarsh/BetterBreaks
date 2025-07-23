@@ -8,6 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError as DRFValidationError
+from rest_framework.permissions import IsAuthenticated
 from django.db.models import Avg
 from datetime import timedelta
 from dateutil import parser as date_parser
@@ -32,6 +33,8 @@ from .serializers import (
     PublicHolidaySerializer,
     WellbeingQuestionSerializer,
     GamificationDataSerializer,
+
+    BreakPlanSerializer,
 )
 from .models import (
     LastLogin,
@@ -809,3 +812,28 @@ class DeleteBlackoutDateView(APIView):
             return Response(status=status.HTTP_204_NO_CONTENT)
         except BlackoutDate.DoesNotExist:
             return Response({"error": "Blackout date not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+# --------------CREATE BREAK PLAN------------------
+
+class CreateBreakPlanView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=BreakPlanSerializer)
+    def post(self, request):
+        serializer = BreakPlanSerializer(data=request.data)
+        if serializer.is_valid():
+            break_plan = serializer.save(user=request.user)
+            return Response({
+                "message": "Break plan created successfully.",
+                "status": True,
+                "data": BreakPlanSerializer(break_plan).data,
+                "errors": None
+            }, status=status.HTTP_201_CREATED)
+
+        return Response({
+            "message": "Invalid input.",
+            "status": False,
+            "data": None,
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)

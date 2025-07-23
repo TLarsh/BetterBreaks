@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
 from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday, WellbeingQuestion
-from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP
+from .models import User, Client, DateEntry, WellbeingScore, BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP
 from .validators import validate_password
 from django.contrib.auth.hashers import make_password 
 from django.contrib.auth import get_user_model
@@ -275,3 +275,20 @@ class GamificationDataSerializer(serializers.ModelSerializer):
             "smart_planning_score"
         ]
         read_only_fields = ["points", "streak_days", "badges", "smart_planning_score"]
+
+
+# ------------BREAK PLAN SERIALIZZER--------------
+
+class BreakPlanSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BreakPlan
+        fields = [
+            "id", "startDate", "endDate", "description", "type", "status"
+        ]
+
+    def validate(self, attrs):
+        if attrs['endDate'] <= attrs['startDate']:
+            raise serializers.ValidationError({
+                "endDate": "End date must be after start date."
+            })
+        return attrs

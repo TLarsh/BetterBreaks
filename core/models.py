@@ -187,3 +187,32 @@ class WellbeingQuestion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     question_text = models.TextField(null=False, blank=False)
     score_type = models.CharField(max_length=100, null=False, blank=False)
+
+# ----------------------------------------
+
+class BreakPlan(models.Model):
+    BREAK_TYPES = [
+        ('vacation', 'Vacation'),
+        ('sick', 'Sick'),
+        ('personal', 'Personal'),
+    ]
+
+    BREAK_STATUSES = [
+        ('planned', 'Planned'),
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    startDate = models.DateTimeField()
+    endDate = models.DateTimeField()
+    description = models.TextField()
+    type = models.CharField(max_length=20, choices=BREAK_TYPES)
+    status = models.CharField(max_length=20, choices=BREAK_STATUSES, default='planned')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.type} ({self.startDate} to {self.endDate})"

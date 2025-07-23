@@ -26,6 +26,7 @@ from .views import (
     AddBlackoutDateView,
     DeleteBlackoutDateView,
     WellbeingQuestionView,
+    CreateBreakPlanView
 )
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -72,6 +73,10 @@ urlpatterns = [
     # path("gamification-data/", GamificationDataView.as_view(), name="gamification-data"),
     # path("suggested-dates/", SuggestedDatesView.as_view(), name="suggested-dates"),
     path("add-date/", AddDateView.as_view(), name="add-date"),
+
+
+
+    path("api/breaks/plan", CreateBreakPlanView.as_view(), name="create-break-plan"),
 
 ]
 
