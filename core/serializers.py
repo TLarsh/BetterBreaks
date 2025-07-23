@@ -77,11 +77,34 @@ class LogoutSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid or expired refresh token")
         return value
 
+# class UserSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for user profile data.
+#     Returns user details for endpoints like /api/profile.
+#     """
+#     class Meta:
+#         model = User
+#         fields = [
+#             "id",
+#             "username",
+#             "email",
+#             "first_name",
+#             "last_name",
+#             "profile_picture_path",
+#             "holiday_days",
+#             "birthday",
+#             "home_location_timezone",
+#             "home_location_coordinates",
+#             "working_days_per_week",
+#         ]
+
+
+
+
 class UserSerializer(serializers.ModelSerializer):
-    """
-    Serializer for user profile data.
-    Returns user details for endpoints like /api/profile.
-    """
+    holiday_days = serializers.IntegerField(required=False, min_value=0, max_value=365)
+    working_days_per_week = serializers.IntegerField(required=False, min_value=0, max_value=7)
+
     class Meta:
         model = User
         fields = [

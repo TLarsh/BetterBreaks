@@ -42,6 +42,7 @@ schema_view = get_schema_view(
     ),
     
     public=True,
+    # url="http://127.0.0.1:8000//",
     permission_classes=(permissions.AllowAny,),
 )
 

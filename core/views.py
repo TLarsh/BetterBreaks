@@ -6,11 +6,15 @@ from rest_framework.permissions import AllowAny
 from rest_framework.authentication import BasicAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
+from django.core.exceptions import ValidationError as DjangoValidationError
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.db.models import Avg
 from datetime import timedelta
+from dateutil import parser as date_parser
 import random
 from django.utils import timezone
 from django.utils.timezone import now
+from .validators import validate_password
 from .serializers import (
     RegisterSerializer,
     LoginSerializer,
@@ -411,44 +415,108 @@ class LogActionView(APIView):
             return Response(status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# class UpdateProfileView(APIView):
+#     """Update user profile details."""
+#     @swagger_auto_schema(request_body=UserSerializer)
+
+#     def post(self, request):
+#         if not request.user.is_authenticated:
+#             return Response(
+#                 {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
+#             )
+#         user = request.user
+#         data = request.data
+#         user.first_name = data.get("first_name", user.first_name)
+#         user.last_name = data.get("last_name", user.last_name)
+#         user.username = data.get("username", user.username)
+#         new_password = data.get("password")
+#         if new_password:
+#             try:
+#                 from .validators import validate_password
+#                 validate_password(new_password)
+#                 user.set_password(new_password)
+#             except ValueError as e:
+#                 return Response(
+#                     {"errors": [str(e)]}, status=status.HTTP_400_BAD_REQUEST
+#                 )
+#         user.email = data.get("email", user.email)
+#         user.holiday_days = data.get("holiday_days", user.holiday_days)
+#         user.birthday = data.get("birthday", user.birthday)
+#         user.home_location_timezone = data.get(
+#             "home_location_timezone", user.home_location_timezone
+#         )
+#         user.home_location_coordinates = data.get(
+#             "home_location_coordinates", user.home_location_coordinates
+#         )
+#         user.working_days_per_week = data.get(
+#             "working_days_per_week", user.working_days_per_week
+#         )
+#         user.save()
+#         return Response({"success": True}, status=status.HTTP_200_OK)
+
+
+
 class UpdateProfileView(APIView):
     """Update user profile details."""
-    @swagger_auto_schema(request_body=UserSerializer)
 
+    @swagger_auto_schema(request_body=UserSerializer)
     def post(self, request):
         if not request.user.is_authenticated:
-            return Response(
-                {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
-            )
+            return Response({
+                "message": "Unauthorized",
+                "status": False,
+                "data": None,
+                "errors": {"auth": "You must be logged in."}
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
         user = request.user
-        data = request.data
-        user.first_name = data.get("first_name", user.first_name)
-        user.last_name = data.get("last_name", user.last_name)
-        user.username = data.get("username", user.username)
+        data = request.data.copy()
+
+        # Convert and validate birthday
+        birthday_str = data.get("birthday")
+        if birthday_str:
+            try:
+                data["birthday"] = date_parser.isoparse(birthday_str)
+            except Exception:
+                return Response({
+                    "message": "Invalid date format for birthday",
+                    "status": False,
+                    "data": None,
+                    "errors": {"birthday": "Use ISO format e.g. 2025-07-23T05:36:26Z"}
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate password (if provided)
         new_password = data.get("password")
         if new_password:
             try:
-                from .validators import validate_password
                 validate_password(new_password)
                 user.set_password(new_password)
-            except ValueError as e:
-                return Response(
-                    {"errors": [str(e)]}, status=status.HTTP_400_BAD_REQUEST
-                )
-        user.email = data.get("email", user.email)
-        user.holiday_days = data.get("holiday_days", user.holiday_days)
-        user.birthday = data.get("birthday", user.birthday)
-        user.home_location_timezone = data.get(
-            "home_location_timezone", user.home_location_timezone
-        )
-        user.home_location_coordinates = data.get(
-            "home_location_coordinates", user.home_location_coordinates
-        )
-        user.working_days_per_week = data.get(
-            "working_days_per_week", user.working_days_per_week
-        )
-        user.save()
-        return Response({"success": True}, status=status.HTTP_200_OK)
+                user.save()
+            except (ValueError, DRFValidationError) as e:
+                return Response({
+                    "message": "Password validation failed",
+                    "status": False,
+                    "data": None,
+                    "errors": {"password": str(e)}
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate other fields via serializer
+        serializer = UserSerializer(instance=user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Profile updated successfully",
+                "status": True,
+                "data": serializer.data,
+                "errors": None
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({
+                "message": "Validation failed",
+                "status": False,
+                "data": None,
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 class UpdateSettingsView(APIView):
     """Update user settings JSON."""
