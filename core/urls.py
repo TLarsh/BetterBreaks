@@ -61,7 +61,7 @@ urlpatterns = [
     path('api/verify-otp/', VerifyOTPView.as_view()),
     path('api/reset-password/', ResetPasswordView.as_view()),
     path('api/dates/', DateListView.as_view(), name='dates'),       # Ensure 'dates' matches test
-    # path('api/blackout-dates/', BlackoutDatesView.as_view(), name='blackout_dates'),
+    path('api/blackout-dates/', BlackoutDatesView.as_view(), name='blackout_dates'),
     path('api/profile/', ProfileView.as_view(), name='profile'),
     # path('api/update-wellbeing/', UpdateWellbeingView.as_view(), name='update_wellbeing'),
     path('api/log-action/', LogActionView.as_view(), name='log_action'),
