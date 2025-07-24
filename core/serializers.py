@@ -319,3 +319,16 @@ class BreakPlanListSerializer(serializers.ModelSerializer):
             return max((obj.endDate.date() - today).days, 0)
         except Exception:
             return 0
+
+
+# ------------------
+
+class BreakPlanUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BreakPlan
+        fields = ["startDate", "endDate", "description", "status"]
+
+    def validate(self, data):
+        if data["endDate"] < data["startDate"]:
+            raise serializers.ValidationError("End date must be after start date.")
+        return data

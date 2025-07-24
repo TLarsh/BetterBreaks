@@ -14,6 +14,7 @@ from django.db.models import Avg
 from datetime import timedelta
 from dateutil import parser as date_parser
 import random
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.timezone import now
 from datetime import datetime, timezone
@@ -38,6 +39,7 @@ from .serializers import (
 
     BreakPlanSerializer,
     BreakPlanListSerializer,
+    BreakPlanUpdateSerializer,
 )
 from .models import (
     LastLogin,
@@ -59,6 +61,10 @@ import uuid
 from .utils import create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+import traceback
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 User = get_user_model()  # Ensure your custom user model is properly configured
@@ -900,10 +906,8 @@ class ListUserBreakPlansView(APIView):
                         "errors": {"year": ["Must be a valid integer"]}
                     }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Order newest first
             plans_qs = plans_qs.order_by("-created_at")
 
-            # Pagination setup
             limit = int(limit) if limit else 10
             offset = int(offset) if offset else 0
 
@@ -923,8 +927,6 @@ class ListUserBreakPlansView(APIView):
                 }, status=status.HTTP_200_OK)
 
             current_page = paginator.page(page_number)
-
-            # Serialize data
             serialized = BreakPlanListSerializer(current_page.object_list, many=True)
 
             return Response({
@@ -941,6 +943,143 @@ class ListUserBreakPlansView(APIView):
         except Exception as e:
             return Response({
                 "message": "An unexpected error occurred.",
+                "status": False,
+                "data": None,
+                "errors": {"server": [str(e)]}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class UpdateBreakPlanView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=BreakPlanUpdateSerializer)
+    def put(self, request, planId):
+        try:
+            user = request.user
+
+            if user.is_superuser or getattr(user, 'role', None) == 'admin':
+                plan = get_object_or_404(BreakPlan, id=planId)
+            else:
+                plan = get_object_or_404(BreakPlan, id=planId, user=user)
+
+            serializer = BreakPlanUpdateSerializer(plan, data=request.data)
+            if serializer.is_valid():
+                updated_plan = serializer.save()
+                return Response({
+                    "message": "Break plan updated successfully.",
+                    "status": True,
+                    "data": {
+                        "plan": {
+                            "id": str(updated_plan.id),
+                            "startDate": updated_plan.startDate,
+                            "endDate": updated_plan.endDate,
+                            "description": updated_plan.description,
+                            "status": updated_plan.status,
+                            "updatedAt": updated_plan.updated_at,
+                        }
+                    },
+                    "errors": None
+                }, status=status.HTTP_200_OK)
+
+            return Response({
+                "message": "Validation failed.",
+                "status": False,
+                "data": None,
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            traceback.print_exc()  # Log to console
+            logger.error(f"BreakPlan update error: {str(e)}")  # Optional: log error
+
+            return Response({
+                "message": "An unexpected error occurred.",
+                "status": False,
+                "data": None,
+                "errors": {
+                    "server": [str(e)]
+                }
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+class DeleteBreakPlanView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_description="Delete a break plan by its ID. Only the owner or an admin can perform this action.",
+        manual_parameters=[
+            openapi.Parameter(
+                'planId',
+                openapi.IN_PATH,
+                description="ID of the break plan to delete",
+                type=openapi.TYPE_STRING,
+                required=True
+            ),
+        ],
+        responses={
+            200: openapi.Response(
+                description="Break plan deleted successfully.",
+                examples={
+                    "application/json": {
+                        "message": "Break plan deleted successfully.",
+                        "status": True,
+                        "data": None,
+                        "errors": None
+                    }
+                }
+            ),
+            403: openapi.Response(
+                description="Forbidden - Not authorized to delete this plan."
+            ),
+            404: openapi.Response(
+                description="Break plan not found."
+            ),
+            500: openapi.Response(
+                description="Unexpected server error."
+            ),
+        }
+    )
+    def delete(self, request, planId):
+        user = request.user
+
+        try:
+            plan = BreakPlan.objects.get(id=planId)
+        except BreakPlan.DoesNotExist:
+            return Response({
+                "message": "Break plan not found.",
+                "status": False,
+                "data": None,
+                "errors": {"planId": ["Invalid plan ID"]}
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                "message": "An unexpected error occurred.",
+                "status": False,
+                "data": None,
+                "errors": {"server": [str(e)]}
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        if not (user.is_superuser or user.is_staff or getattr(user, 'role', '') == 'admin' or plan.user == user):
+            return Response({
+                "message": "You do not have permission to delete this plan.",
+                "status": False,
+                "data": None,
+                "errors": {"permission": "Not authorized"}
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            plan.delete()
+            return Response({
+                "message": "Break plan deleted successfully.",
+                "status": True,
+                "data": None,
+                "errors": None
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                "message": "An error occurred while deleting the break plan.",
                 "status": False,
                 "data": None,
                 "errors": {"server": [str(e)]}
