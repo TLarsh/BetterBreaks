@@ -10,6 +10,7 @@ from .models import (
     UserSettings,
     ActionData,
     OnboardingData,
+    UserNotificationPreference,
 )
 
 # Custom Admin Configuration for User Model
@@ -141,6 +142,21 @@ class UserSettingsAdmin(admin.ModelAdmin):
     search_fields = ("user__username",)
     ordering = ("user__username",)
 
+# Custom Admin Configuration for UserNotificationPrefrence Model
+@admin.register(UserNotificationPreference)
+class UserNotificationPreferenceAdmin(admin.ModelAdmin):
+    list_display = (
+        'user',
+        'breaksReminder',
+        'suggestions',
+        'deadlineAlerts',
+        'weeklyDigest',
+        'pushEnabled',
+        'emailEnabled',
+    )
+    list_filter = ('breaksReminder', 'suggestions', 'deadlineAlerts', 'weeklyDigest', 'pushEnabled', 'emailEnabled')
+    search_fields = ('user__email', 'user__username')
+
 # Register all models with custom configurations
 admin.site.register(User, UserAdmin)
 admin.site.register(Client, ClientAdmin)
@@ -151,3 +167,4 @@ admin.site.register(WellbeingScore, WellbeingScoreAdmin)
 admin.site.register(ActionData, ActionDataAdmin)
 admin.site.register(OnboardingData, OnboardingDataAdmin)
 admin.site.register(UserSettings, UserSettingsAdmin)
+# admin.site.register(UserNotificationPreference, UserNotificationPreferenceAdmin)

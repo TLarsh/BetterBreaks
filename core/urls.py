@@ -31,6 +31,7 @@ from .views import (
     UpdateBreakPlanView,
     DeleteBreakPlanView,
     UserSettingsView,
+    NotificationPreferenceView,
 )
 
 from drf_yasg.views import get_schema_view
@@ -88,6 +89,7 @@ urlpatterns = [
 
 
     path("api/user/settings", UserSettingsView.as_view(), name="user_settings"),
+    path('api/user/notification-preferences', NotificationPreferenceView.as_view()),
 
 ]
 

@@ -225,3 +225,17 @@ class BreakPlan(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.type} ({self.startDate} to {self.endDate})"
+
+# ======== USER - NOTIFICATION =======
+
+class UserNotificationPreference(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='notification_preferences')
+    breaksReminder = models.BooleanField(default=True)
+    suggestions = models.BooleanField(default=True)
+    deadlineAlerts = models.BooleanField(default=True)
+    weeklyDigest = models.BooleanField(default=True)
+    pushEnabled = models.BooleanField(default=True)
+    emailEnabled = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Notification preferences for {self.user.email}"

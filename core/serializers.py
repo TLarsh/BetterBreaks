@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
-from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday, WellbeingQuestion
+from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday, WellbeingQuestion, UserNotificationPreference
 from .models import User, Client, DateEntry, WellbeingScore, BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP
 from .validators import validate_password
 from django.contrib.auth.hashers import make_password 
@@ -350,4 +350,19 @@ class UserSettingsSerializer(serializers.ModelSerializer):
         if value not in pytz.all_timezones:
             raise serializers.ValidationError("Invalid timezone")
         return value
+
+
+# ======= USER NOTIFICATION SERILIZER ========
+
+class NotificationPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserNotificationPreference
+        fields = [
+            'breaksReminder',
+            'suggestions',
+            'deadlineAlerts',
+            'weeklyDigest',
+            'pushEnabled',
+            'emailEnabled'
+        ]
 
