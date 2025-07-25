@@ -131,7 +131,13 @@ class OnboardingDataAdmin(admin.ModelAdmin):
 
 # Custom Admin Configuration for UserSettings Model
 class UserSettingsAdmin(admin.ModelAdmin):
-    list_display = ("user", "settings_json")
+    list_display = (
+        "user",
+        "theme",
+        "language",
+        "timezone",
+        "currency"
+    )
     search_fields = ("user__username",)
     ordering = ("user__username",)
 

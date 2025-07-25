@@ -36,10 +36,12 @@ from .serializers import (
     PublicHolidaySerializer,
     WellbeingQuestionSerializer,
     GamificationDataSerializer,
-
+    # _____BreakSerializer_______
     BreakPlanSerializer,
     BreakPlanListSerializer,
     BreakPlanUpdateSerializer,
+    # _____settingsSerializer___
+    UserSettingsSerializer
 )
 from .models import (
     LastLogin,
@@ -53,7 +55,7 @@ from .models import (
     PublicHoliday,
     GamificationData,
     WellbeingQuestion,
-
+    
     BreakPlan
 
 )
@@ -1084,3 +1086,51 @@ class DeleteBreakPlanView(APIView):
                 "data": None,
                 "errors": {"server": [str(e)]}
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+# =============USER SETTINGS=============
+
+class UserSettingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        responses={200: UserSettingsSerializer()},
+        operation_description="Get the authenticated user's app settings"
+    )
+    def get(self, request):
+        user = request.user
+        settings_obj, _ = UserSettings.objects.get_or_create(user=user)
+        serializer = UserSettingsSerializer(settings_obj)
+        return Response({
+            "message": "Settings retrieved successfully.",
+            "status": True,
+            "data": serializer.data,
+            "errors": None
+        }, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        request_body=UserSettingsSerializer,
+        responses={200: openapi.Response(description="Settings updated successfully")}
+    )
+    def put(self, request):
+        user = request.user
+        settings_obj, _ = UserSettings.objects.get_or_create(user=user)
+
+        serializer = UserSettingsSerializer(settings_obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({
+                "message": "Settings updated successfully.",
+                "status": True,
+                "data": None,
+                "errors": None
+            }, status=status.HTTP_200_OK)
+
+        return Response({
+            "message": "Validation failed.",
+            "status": False,
+            "data": None,
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)

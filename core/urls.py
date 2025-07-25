@@ -30,7 +30,9 @@ from .views import (
     ListUserBreakPlansView,
     UpdateBreakPlanView,
     DeleteBreakPlanView,
+    UserSettingsView,
 )
+
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
@@ -67,7 +69,7 @@ urlpatterns = [
     path('api/log-action/', LogActionView.as_view(), name='log_action'),
     path('api/update-profile/', UpdateProfileView.as_view(), name='update_profile'),
     # path('api/update-settings/', UpdateSettingsView.as_view(), name='update_settings'),
-    path('api/settings/', GetSettingsView.as_view(), name='get_settings'),
+    # path('api/settings/', GetSettingsView.as_view(), name='get_settings'),
     # path('api/onboarding/', GetOnboardingDataView.as_view(), name='get_onboarding_data'),
     # path('api/update-onboarding/', UpdateOnboardingDataView.as_view(), name='update_onboarding_data'),
     # path("fetch-public-holidays/", FetchPublicHolidaysView.as_view(), name="fetch-public-holidays"),
@@ -83,6 +85,9 @@ urlpatterns = [
     path("api/breaks/plans", ListUserBreakPlansView.as_view(), name="list-break-plans"),
     path("api/breaks/plans/<uuid:planId>", UpdateBreakPlanView.as_view(), name="update-break-plan"),
     path("api/breaks/plan/<uuid:planId>", DeleteBreakPlanView.as_view(), name="delete-break-plan"),
+
+
+    path("api/user/settings", UserSettingsView.as_view(), name="user_settings"),
 
 ]
 
