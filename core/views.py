@@ -7,10 +7,11 @@ from rest_framework.authentication import BasicAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Q
+from django.db.models import Q, Avg
 from django.core.paginator import Paginator
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from django.db.models import Avg
+from django.db import transaction, IntegrityError
+import traceback
 from datetime import timedelta
 from dateutil import parser as date_parser
 import random
@@ -43,7 +44,11 @@ from .serializers import (
     # _____settingsSerializer___
     UserSettingsSerializer,
     # _____notificationSerializer___
-    NotificationPreferenceSerializer
+    NotificationPreferenceSerializer,
+    # _____Schedule___
+    WorkingPatternSerializer,
+    BlackOutDateSerializer,
+    OptimizationGoalSerializer,
 
 )
 from .models import (
@@ -60,9 +65,12 @@ from .models import (
     WellbeingQuestion,
     
     BreakPlan,
-    UserNotificationPreference
+    UserNotificationPreference,
+    WorkingPattern,
+    OptimizationGoal
 
 )
+from .swagger_api_fe import schedule_get_schema, schedule_post_schema
 import uuid
 from .utils import create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response
 from drf_yasg.utils import swagger_auto_schema
@@ -1173,3 +1181,110 @@ class NotificationPreferenceView(APIView):
             "errors": serializer.errors,
             "data": None
         }, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class ScheduleView(APIView):
+    """
+    Combined view to GET or POST WorkingPattern, BlackoutDates, and OptimizationGoals
+    """
+
+    @schedule_get_schema
+    def get(self, request):
+        user = request.user
+        try:
+            working_pattern = WorkingPattern.objects.filter(user=user).first()
+            blackout_dates = BlackoutDate.objects.filter(user=user)
+            optimization_goals = OptimizationGoal.objects.filter(user=user)
+
+            data = {
+                "working_pattern": WorkingPatternSerializer(working_pattern).data if working_pattern else None,
+                "blackout_dates": BlackOutDateSerializer(blackout_dates, many=True).data,
+                "optimization_goals": OptimizationGoalSerializer(optimization_goals, many=True).data,
+            }
+
+            return Response({
+                "message": "Schedule retrieved successfully.",
+                "status": True,
+                "data": data,
+                "errors": None
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({
+                "message": "Internal server error.",
+                "status": False,
+                "data": None,
+                "errors": {
+                    "non_field_errors": [str(e)],
+                    "traceback": traceback.format_exc().splitlines()
+                }
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @schedule_post_schema
+    def post(self, request):
+        user = request.user
+        data = request.data
+
+        try:
+            with transaction.atomic():
+                # === WORKING PATTERN ===
+                wp_data = data.get('working_pattern')
+                if wp_data:
+                    wp_instance, _ = WorkingPattern.objects.get_or_create(user=user)
+                    wp_serializer = WorkingPatternSerializer(wp_instance, data=wp_data, partial=True)
+                    wp_serializer.is_valid(raise_exception=True)
+                    wp_serializer.save()
+
+                # === BLACKOUT DATES ===
+                blackout_data = data.get('blackout_dates', [])
+                BlackoutDate.objects.filter(user=user).delete()
+                if blackout_data:
+                    blackout_serializer = BlackOutDateSerializer(
+                        data=blackout_data,
+                        many=True,
+                        context={"request": request}
+                    )
+                    blackout_serializer.is_valid(raise_exception=True)
+                    blackout_serializer.save()
+
+                # === OPTIMIZATION GOALS ===
+                OptimizationGoal.objects.filter(user=user).delete()
+                goal_data = data.get('optimization_goals', [])
+                goal_objects = [OptimizationGoal(user=user, preference=pref) for pref in goal_data]
+                OptimizationGoal.objects.bulk_create(goal_objects)
+
+                return Response({
+                    "message": "Schedule updated successfully.",
+                    "status": True,
+                    "data": None,
+                    "errors": None
+                }, status=status.HTTP_200_OK)
+
+        except DRFValidationError as ve:
+            return Response({
+                "message": "Validation failed.",
+                "status": False,
+                "data": None,
+                "errors": ve.detail
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        except IntegrityError as ie:
+            return Response({
+                "message": "Database integrity error.",
+                "status": False,
+                "data": None,
+                "errors": {"non_field_errors": [str(ie)]}
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            return Response({
+                "message": "An unexpected error occurred.",
+                "status": False,
+                "data": None,
+                "errors": {
+                    "non_field_errors": [str(e)],
+                    "traceback": traceback.format_exc().splitlines()
+                }
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

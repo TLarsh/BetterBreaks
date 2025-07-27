@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
 from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday, WellbeingQuestion, UserNotificationPreference
-from .models import User, Client, DateEntry, WellbeingScore, BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP
+from .models import User, Client, DateEntry, WellbeingScore, BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP, WorkingPattern, OptimizationGoal
 from .validators import validate_password
 from django.contrib.auth.hashers import make_password 
 from django.contrib.auth import get_user_model
@@ -366,3 +366,33 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
             'emailEnabled'
         ]
 
+# ======= USER-NOTIFICATION-SERILIZER ========
+class WorkingPatternSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkingPattern
+        fields = '__all__'
+        read_only_fields = ['user', 'created_at']
+
+# ======= BLACKOUT-DATE-LIST-SERILIZER ========
+class BlackOutDateListSerializer(serializers.ListSerializer):
+    def create(self, validated_data):
+        user = self.context['request'].user
+        for item in validated_data:
+            item['user'] = user
+        return super().create(validated_data)
+
+# ======= BLACKOUT-DATE-SERILIZER ========
+class BlackOutDateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlackoutDate
+        fields = '__all__'
+        read_only_fields = ('user',)
+        list_serializer_class = BlackOutDateListSerializer
+
+
+# ======= OPTIMIZATION-GOAL-SERILIZER ========
+class OptimizationGoalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OptimizationGoal
+        fields = '__all__'
+        read_only_fields = ('user',)

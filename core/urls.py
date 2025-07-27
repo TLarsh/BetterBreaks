@@ -32,12 +32,12 @@ from .views import (
     DeleteBreakPlanView,
     UserSettingsView,
     NotificationPreferenceView,
+    ScheduleView,
 )
 
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 from rest_framework import permissions
-from .swagger_api_fe import schema_view
 schema_view = get_schema_view(
     openapi.Info(
         title="BetterBreaks",
@@ -90,6 +90,7 @@ urlpatterns = [
 
     path("api/user/settings", UserSettingsView.as_view(), name="user_settings"),
     path('api/user/notification-preferences', NotificationPreferenceView.as_view()),
+    path("api/schedule", ScheduleView.as_view(), name="schedule"),
 
 ]
 
