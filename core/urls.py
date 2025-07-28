@@ -76,7 +76,7 @@ urlpatterns = [
     path("api/fetch-public-holidays/", FetchPublicHolidaysView.as_view(), name="fetch-public-holidays"),
     path("api/list-public-holidays/", ListPublicHolidaysView.as_view(), name="list-public-holidays"),
     path("api/optimization-score/", OptimizationScoreView.as_view(), name="optimization-score"),
-    path("gamification-data/", GamificationDataView.as_view(), name="gamification-data"),
+    path("api/gamification-data/", GamificationDataView.as_view(), name="gamification-data"),
     path("api/suggested-dates/", SuggestedDatesView.as_view(), name="suggested-dates"),
     path("api/add-date/", AddDateView.as_view(), name="add-date"),
 
