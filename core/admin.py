@@ -11,7 +11,7 @@ from .models import (
     ActionData,
     OnboardingData,
     UserNotificationPreference,
-    BreakkkPlan,
+    BreakPlan,
 )
 
 # Custom Admin Configuration for User Model
@@ -134,21 +134,29 @@ class OnboardingDataAdmin(admin.ModelAdmin):
 # Custom Admin Configuration for BreakPlan Model
 @admin.register(BreakPlan)
 class BreakPlanAdmin(admin.ModelAdmin):
-    list_display = ('id', 'user', 'break_type', 'start_time', 'end_time', 'created_at')
-    list_filter = ('break_type', 'start_time')
-    search_fields = ('user__username', 'break_type')
+    list_display = (
+        'user',
+        'type',
+        'status',
+        'startDate',
+        'endDate',
+        'created_at',
+    )
+    list_filter = ('type', 'status', 'startDate')
+    search_fields = ('user__username', 'description', 'type', 'status')
     ordering = ('-created_at',)
 
+    readonly_fields = ('created_at', 'updated_at')
+
     fieldsets = (
-        (None, {
-            'fields': ('user', 'break_type', 'start_time', 'end_time')
+        ('Break Plan Info', {
+            'fields': ('user', 'type', 'status', 'startDate', 'endDate', 'description')
         }),
-        ('Meta', {
-            'fields': ('created_at',),
-            'classes': ('collapse',)
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',),
         }),
     )
-    readonly_fields = ('created_at',)
 
 # Custom Admin Configuration for UserSettings Model
 class UserSettingsAdmin(admin.ModelAdmin):
