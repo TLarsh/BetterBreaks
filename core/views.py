@@ -18,7 +18,7 @@ import random
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.timezone import now
-from datetime import datetime, timezone
+from datetime import datetime
 from .validators import validate_password
 from .serializers import (
     RegisterSerializer,
@@ -686,56 +686,84 @@ class OptimizationScoreView(APIView):
     
 class GamificationDataView(APIView):
     """Retrieve gamification data for the authenticated user."""
+
     def get(self, request):
         if not request.user.is_authenticated:
-            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({
+                "message": "Unauthorized",
+                "status": False,
+                "data": None,
+                "errors": {"detail": "User is not authenticated."}
+            }, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Get or create gamification data
-        gamification_data, created = GamificationData.objects.get_or_create(user=request.user)
-
-        # Calculate the Smart Planning Score
+        gamification_data, _ = GamificationData.objects.get_or_create(user=request.user)
         smart_planning_score = calculate_smart_planning_score(request.user)
 
-        return Response(
-            {
+        return Response({
+            "message": "Gamification data retrieved successfully.",
+            "status": True,
+            "data": {
                 "points": gamification_data.points,
                 "streak_days": gamification_data.streak_days,
                 "badges": gamification_data.badges,
                 "smart_planning_score": smart_planning_score,
             },
-            status=status.HTTP_200_OK,
-        )
+            "errors": None
+        }, status=status.HTTP_200_OK)
     
 
 class UpdateWellbeingView(APIView):
     """Log user's wellbeing score and update gamification data."""
+
     @swagger_auto_schema(request_body=WellbeingScoreSerializer)
     def post(self, request):
         if not request.user.is_authenticated:
-            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({
+                "message": "Unauthorized",
+                "status": False,
+                "data": None,
+                "errors": {"detail": "User is not authenticated."}
+            }, status=status.HTTP_401_UNAUTHORIZED)
 
         score = request.data.get("score")
         score_type = request.data.get("score_type")
-        if not score or not score_type:
-            return Response({"errors": ["Score and Score Type are required"]}, status=status.HTTP_400_BAD_REQUEST)
 
-        WellbeingScore.objects.create(
+        if not score or not score_type:
+            return Response({
+                "message": "Validation failed.",
+                "status": False,
+                "data": None,
+                "errors": {
+                    "score": "This field is required." if not score else "",
+                    "score_type": "This field is required." if not score_type else ""
+                }
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        wellbeing = WellbeingScore.objects.create(
             user=request.user,
             score=score,
             score_type=score_type,
             score_date=timezone.now()
         )
-        
 
         # Update gamification data
-        gamification_data, created = GamificationData.objects.get_or_create(user=request.user)
-        gamification_data.points += 20  # Award 20 points for logging a wellbeing score
+        gamification_data, _ = GamificationData.objects.get_or_create(user=request.user)
+        gamification_data.points += 20  # Award 20 points
         gamification_data.save()
 
         # Award badges
         award_badges(request.user)
 
-        return Response(status=status.HTTP_200_OK)
+        return Response({
+            "message": "Wellbeing score logged successfully.",
+            "status": True,
+            "data": {
+                "score": wellbeing.score,
+                "score_type": wellbeing.score_type,
+                "score_date": wellbeing.score_date
+            },
+            "errors": None
+        }, status=status.HTTP_200_OK)
  
 class SuggestedDatesView(APIView):
     """Generate suggested holidays and incorporate weather data."""
