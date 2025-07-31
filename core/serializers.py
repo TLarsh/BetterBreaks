@@ -1,14 +1,14 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
-from .models import User, Client, DateEntry, WellbeingScore, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday, WellbeingQuestion, UserNotificationPreference
-from .models import User, Client, DateEntry, WellbeingScore, BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP, WorkingPattern, OptimizationGoal
+from django.utils import timezone
+from .models import User, Client, DateEntry, WellbeingScore, BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP, WorkingPattern, OptimizationGoal, UserNotificationPreference, WellbeingQuestion
 from .validators import validate_password
 from django.contrib.auth.hashers import make_password 
 from django.contrib.auth import get_user_model
 from core.utils import send_otp_email
 import random
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 import pytz
 
@@ -16,25 +16,29 @@ import pytz
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     password_confirmation = serializers.CharField(write_only=True)
+    username = serializers.CharField(required=False, allow_blank=True, help_text="Optional username")
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "password_confirmation"]
+        fields = ["email", "username", "password", "password_confirmation"]
+        extra_kwargs = {
+            "email": {"required": True, "help_text": "Email address for registration"},
+            "password": {"help_text": "Password (will be validated against Django's password rules)"},
+            "password_confirmation": {"help_text": "Confirm password"},
+        }
 
     def validate(self, data):
         if data["password"] != data["password_confirmation"]:
             raise serializers.ValidationError({"errors": ["Passwords do not match"]})
-        try:
-            validate_password(data["password"])
-        except ValueError as e:
-            raise serializers.ValidationError({"errors": [str(e)]})
+        validate_password(data["password"])
         return data
 
     def create(self, validated_data):
+        validated_data.pop("password_confirmation", None)
         return User.objects.create_user(
-            username=validated_data["username"],
             email=validated_data["email"],
-            password=validated_data["password"],
+            username=validated_data.get("username"),
+            password=validated_data["password"]
         )
 
 class LoginSerializer(serializers.Serializer):
@@ -124,7 +128,7 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
 
-# Request password reset otp serializer ________
+# Request password reset otp serializer ________//
 
 class RequestOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -135,11 +139,23 @@ class RequestOTPSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        otp = f"{random.randint(100000, 999999)}"
-        email = validated_data['email']
-        PasswordResetOTP.objects.create(email=email, otp=otp)
-        send_otp_email(email, otp)
-        return {"email": email, "otp_sent": True}
+        email = validated_data["email"]
+
+        otp = str(random.randint(100000, 999999))
+
+        PasswordResetOTP.objects.create(
+            email=email,
+            otp=otp,
+            created_at=timezone.now(),
+            is_verified=False
+        )
+
+        success, message = send_otp_email(email, otp)
+
+        if not success:
+            raise serializers.ValidationError({"email": message})
+
+        return validated_data
 
 # Verify Email OTP Serializer________________/
 

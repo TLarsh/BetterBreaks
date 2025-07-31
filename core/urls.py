@@ -6,6 +6,7 @@ from .views import (
     RequestOTPView,
     VerifyOTPView,
     ResetPasswordView,
+    GoogleLoginView, FacebookLoginView, TwitterLoginView,
     DateListView,
     BlackoutDatesView,
     ProfileView,
@@ -57,12 +58,20 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('api/swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    path('api/register/', RegisterView.as_view(), name='register'),  # Ensure 'register' matches test
-    path('api/login/', LoginView.as_view(), name='login'),          # Ensure 'login' matches test
-    path('api/logout/', LogoutView.as_view(), name='logout'),      # Ensure 'logout' matches test
-    path('api/request-reset/', RequestOTPView.as_view()),
-    path('api/verify-otp/', VerifyOTPView.as_view()),
-    path('api/reset-password/', ResetPasswordView.as_view()),
+    path('api/auth/register/', RegisterView.as_view(), name='register'),  # Ensure 'register' matches test
+    path('api/auth/login/', LoginView.as_view(), name='login'),          # Ensure 'login' matches test
+    path('api/auth/logout/', LogoutView.as_view(), name='logout'),      # Ensure 'logout' matches test
+    path('api/auth/request-reset/', RequestOTPView.as_view()),
+    path('api/auth/verify-otp/', VerifyOTPView.as_view()),
+    path('api/auth/reset-password/', ResetPasswordView.as_view()),
+
+
+    path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
+    path("api/auth/facebook/", FacebookLoginView.as_view(), name="facebook-login"),
+    path("api/auth/twitter/", TwitterLoginView.as_view(), name="twitter-login"),
+
+
+
     path('api/dates/', DateListView.as_view(), name='dates'),       # Ensure 'dates' matches test
     path('api/blackout-dates/', BlackoutDatesView.as_view(), name='blackout_dates'),
     path('api/profile/', ProfileView.as_view(), name='profile'),

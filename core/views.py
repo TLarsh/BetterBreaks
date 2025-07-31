@@ -70,13 +70,33 @@ from .models import (
     OptimizationGoal
 
 )
-from .swagger_api_fe import schedule_get_schema, schedule_post_schema
+from .swagger_api_fe import (
+    schedule_get_schema, 
+    schedule_post_schema, 
+    google_login_schema, 
+    facebook_login_schema, 
+    twitter_login_schema
+)
 import uuid
-from .utils import create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response
+from.helper import validate_and_create_user
+from .utils import (
+    create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response,
+)
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import traceback
 import logging
+
+# =======SOCIAL ALLAUTH ACCOUNT PROVIDERS=====
+# from drf_yasg.utils import swagger_auto_schema
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.facebook.views import FacebookOAuth2Adapter
+from allauth.socialaccount.providers.twitter.views import TwitterOAuthAdapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from allauth.socialaccount.providers.oauth.client import OAuthClient
+# =============================================
+
+from .social_base_login import BaseSocialLoginView
 
 logger = logging.getLogger(__name__)
 
@@ -88,11 +108,15 @@ class RegisterView(APIView):
     """Handle user registration with password validation."""
     permission_classes = [AllowAny]
 
-    @swagger_auto_schema(request_body=RegisterSerializer)
+    @swagger_auto_schema(
+        request_body=RegisterSerializer,
+        operation_summary="Register a new user",
+        operation_description="Registers a new user with email, optional username, and password confirmation."
+    )
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        if serializer.is_valid():
-            user = serializer.save()
+        try:
+            user = validate_and_create_user(request.data)
+
             return success_response(
                 message="Registration successful",
                 data={
@@ -102,11 +126,20 @@ class RegisterView(APIView):
                 status_code=status.HTTP_201_CREATED
             )
 
-        return error_response(
-            message="Registration failed",
-            errors=serializer.errors,
-            status_code=status.HTTP_400_BAD_REQUEST
-)
+        except DRFValidationError as ve:
+            return error_response(
+                message="Registration failed",
+                errors=ve.detail if hasattr(ve, "detail") else str(ve),
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        except Exception as e:
+            return error_response(
+                message="An unexpected error occurred during registration",
+                errors={"detail": str(e)},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
@@ -140,7 +173,30 @@ class LoginView(APIView):
             message="Login failed",
             errors=serializer.errors
         )
-        
+
+
+class GoogleLoginView(BaseSocialLoginView):
+    adapter_class = GoogleOAuth2Adapter
+    client_class = OAuth2Client
+    @google_login_schema
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+
+class FacebookLoginView(BaseSocialLoginView):
+    adapter_class = FacebookOAuth2Adapter
+    client_class = OAuth2Client
+    @facebook_login_schema
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)
+
+
+class TwitterLoginView(BaseSocialLoginView):
+    adapter_class = TwitterOAuthAdapter
+    client_class = OAuthClient  # OAuth 1.0a for Twitter
+    @twitter_login_schema
+    def post(self, request, *args, **kwargs):
+        return super().post(request, *args, **kwargs)       
 
 class LogoutView(APIView):
     """Handle user logout by blacklisting the refresh token."""
@@ -189,22 +245,34 @@ class RequestOTPView(APIView):
     authentication_classes = []
     permission_classes = [AllowAny]
 
-    @swagger_auto_schema(request_body=RequestOTPSerializer)
+    @swagger_auto_schema(
+        request_body=RequestOTPSerializer,
+        operation_summary="Request OTP for password reset",
+        operation_description="Generates a 6-digit OTP and sends it to the provided email address."
+    )
     def post(self, request):
-        serializer = RequestOTPSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return success_response(
-                message="OTP sent to your email.",
-                data=None,
-                status_code=status.HTTP_200_OK
-            )
-        return error_response(
-            message="Failed to send OTP",
-            errors=serializer.errors,
-            status_code=status.HTTP_400_BAD_REQUEST
-        )
+        try:
+            serializer = RequestOTPSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return success_response(
+                    message="OTP sent successfully to your email.",
+                    data=None,
+                    status_code=status.HTTP_200_OK
+                )
 
+            return error_response(
+                message="Failed to send OTP",
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+        except Exception as e:
+            return error_response(
+                message="An unexpected error occurred while sending OTP",
+                errors={"detail": str(e)},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class VerifyOTPView(APIView):
     authentication_classes = []

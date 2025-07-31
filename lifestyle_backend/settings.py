@@ -13,11 +13,14 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
+import environ
 from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv()  # loads from .env by default
-
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,24 +44,96 @@ CORS_ALLOW_ALL_ORIGINS = True  # or define allowed origins specifically
 # Application definition
 
 INSTALLED_APPS = [
-    "rest_framework",
-    "rest_framework_simplejwt",
-    "rest_framework_simplejwt.token_blacklist",
+    # Django default apps...
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
+    # cors + swagger
     "core",
     "drf_yasg",
     "corsheaders",
+
+    # DRF + JWT
+    "rest_framework",
+    "rest_framework_simplejwt",
+    "rest_framework.authtoken",
+    "rest_framework_simplejwt.token_blacklist",
+
+    # Allauth
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+
+    # Providers
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.twitter',
     
 ]
+
+
+# Authentication backends (must include allauth)
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+#  Allauth new settings format
+ACCOUNT_LOGIN_METHODS = {"email"}  # Only allow login via email
+
+# Fields required for signup (`*` means required)
+ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+
+ACCOUNT_EMAIL_VERIFICATION = "optional"  # or 'mandatory'
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
+ACCOUNT_UNIQUE_EMAIL = True
+# Optional: disable session login for APIs (JWT-based)
+ACCOUNT_SESSION_REMEMBER = False
+# ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True
+
+# Redirect URL (used by Allauth after social login callback)
+# Since you have no web frontend, we use API redirect
+LOGIN_REDIRECT_URL = "/api/auth/social/callback/"  # We'll handle token creation here
+
+# Social provider credentials (replace with your own)
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "APP": {
+            "client_id": env("GOOGLE_CLIENT_ID"),
+            "secret": env("GOOGLE_CLIENT_SECRET"),
+            "key": ""
+        },
+        "SCOPE": ["email", "profile"],
+        "AUTH_PARAMS": {"access_type": "offline"},
+    },
+    "facebook": {
+        "APP": {
+            "client_id": env("FACEBOOK_APP_ID"),
+            "secret": env("FACEBOOK_APP_SECRET"),
+            "key": ""
+        },
+        "SCOPE": ["email"],
+        "FIELDS": ["id", "email", "name", "first_name", "last_name", "picture"],
+    },
+    "twitter": {
+        "APP": {
+            "client_id": env("TWITTER_API_KEY"),
+            "secret": env("TWITTER_API_SECRET"),
+            "key": ""
+        }
+    }
+}
+
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -153,7 +228,7 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
         "OPTIONS": {
-            "min_length": 16,  # Enforce 16-character minimum
+            "min_length": 8,  # Enforce 16-character minimum
         },
     },
     {
@@ -208,12 +283,12 @@ SWAGGER_SETTINGS = {
 }
 
 
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 465))
+EMAIL_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "True") == "True"
+Email_USE_TLS=False
+EMAIL_TIMEOUT = 30
 
 RENDER = os.getenv("RENDER", "False") == "True"
