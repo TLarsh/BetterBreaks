@@ -66,9 +66,9 @@ urlpatterns = [
     path('api/auth/reset-password/', ResetPasswordView.as_view()),
 
 
-    path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
-    path("api/auth/facebook/", FacebookLoginView.as_view(), name="facebook-login"),
-    path("api/auth/twitter/", TwitterLoginView.as_view(), name="twitter-login"),
+    # path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
+    # path("api/auth/facebook/", FacebookLoginView.as_view(), name="facebook-login"),
+    # path("api/auth/twitter/", TwitterLoginView.as_view(), name="twitter-login"),
 
 
 

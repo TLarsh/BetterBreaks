@@ -215,7 +215,7 @@ def send_otp_email(email, otp):
         """
 
         # Email configuration
-        from_email = settings.EMAIL_HOST_USER
+        from_email = settings.EMAIL_USER
         to_email = email
 
         # Create MIME message
