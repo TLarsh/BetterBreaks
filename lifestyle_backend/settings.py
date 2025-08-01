@@ -13,14 +13,14 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 from pathlib import Path
 from datetime import timedelta
 import os
-import environ
+# import environ
 from dotenv import load_dotenv
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv()  # loads from .env by default
-env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
+# env = environ.Env()
+# environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -103,8 +103,8 @@ LOGIN_REDIRECT_URL = "/api/auth/social/callback/"  # We'll handle token creation
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
-            "client_id": env("GOOGLE_CLIENT_ID"),
-            "secret": env("GOOGLE_CLIENT_SECRET"),
+            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+            "secret": os.getenv("GOOGLE_CLIENT_SECRET"),
             "key": ""
         },
         "SCOPE": ["email", "profile"],
@@ -112,8 +112,8 @@ SOCIALACCOUNT_PROVIDERS = {
     },
     "facebook": {
         "APP": {
-            "client_id": env("FACEBOOK_APP_ID"),
-            "secret": env("FACEBOOK_APP_SECRET"),
+            "client_id": os.getenv("FACEBOOK_APP_ID"),
+            "secret": os.getenv("FACEBOOK_APP_SECRET"),
             "key": ""
         },
         "SCOPE": ["email"],
@@ -121,8 +121,8 @@ SOCIALACCOUNT_PROVIDERS = {
     },
     "twitter": {
         "APP": {
-            "client_id": env("TWITTER_API_KEY"),
-            "secret": env("TWITTER_API_SECRET"),
+            "client_id": os.getenv("TWITTER_API_KEY"),
+            "secret": os.getenv("TWITTER_API_SECRET"),
             "key": ""
         }
     }
