@@ -33,6 +33,9 @@
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from .serializers import MoodCheckInSerializer, MoodHistorySerializer, LeaveBalanceSerializer, BreakPreferencesSerializer, BreakPlanSerializer
+from rest_framework import status
+
 
 # ========== Swagger Docs for GET Schedule ==========
 schedule_get_schema = swagger_auto_schema(
@@ -215,5 +218,87 @@ twitter_login_schema = swagger_auto_schema(
                 }
             }
         )
+    }
+)
+
+
+
+
+# Swagger for Mood Check-in
+mood_checkin_schema = swagger_auto_schema(
+    # method="post",
+    tags=["Mood Tracking"],
+    operation_summary="Mood Check-In",
+    operation_description="Record the user's current mood with an optional note.",
+    request_body=MoodCheckInSerializer,
+    responses={
+        status.HTTP_201_CREATED: openapi.Response(
+            description="Mood check-in successful",
+            schema=MoodCheckInSerializer
+        ),
+        status.HTTP_400_BAD_REQUEST: "Validation error"
+    }
+)
+
+# Swagger for Mood History
+mood_history_schema = swagger_auto_schema(
+    # method="get",
+    tags=["Mood Tracking"],
+    operation_summary="Retrieve Mood History",
+    operation_description="Get the mood history for the authenticated user. Optionally filter by start_date and end_date (YYYY-MM-DD).",
+    manual_parameters=[
+        openapi.Parameter(
+            "start_date",
+            openapi.IN_QUERY,
+            description="Filter moods from this date (YYYY-MM-DD)",
+            type=openapi.TYPE_STRING
+        ),
+        openapi.Parameter(
+            "end_date",
+            openapi.IN_QUERY,
+            description="Filter moods until this date (YYYY-MM-DD)",
+            type=openapi.TYPE_STRING
+        ),
+    ],
+    responses={
+        status.HTTP_200_OK: openapi.Response(
+            description="Mood history retrieved successfully",
+            schema=MoodHistorySerializer(many=True)
+        )
+    }
+)
+
+
+
+first_login_setup_docs = swagger_auto_schema(
+    operation_summary="First Login Setup",
+    operation_description="Initial setup for LeaveBalance, Preferences, and optional BreakPlan.",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            "LeaveBalance": openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                "annual_leave_balance": openapi.Schema(type=openapi.TYPE_INTEGER, example=60),
+                "annual_leave_refresh_date": openapi.Schema(type=openapi.FORMAT_DATE, example="2025-01-01"),
+                "already_used_balance": openapi.Schema(type=openapi.TYPE_INTEGER, example=0)
+            }),
+            "Preferences": openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                "preference": openapi.Schema(type=openapi.TYPE_STRING, example="long_weekends"),
+                "weather_based_recommendation": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False),
+                "to_be_confirmed": openapi.Schema(type=openapi.TYPE_BOOLEAN, example=False)
+            }),
+            "BreakPlan": openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                "startDate": openapi.Schema(type=openapi.FORMAT_DATETIME, example="2025-08-10T09:00:00Z"),
+                "endDate": openapi.Schema(type=openapi.FORMAT_DATETIME, example="2025-08-15T18:00:00Z"),
+                "description": openapi.Schema(type=openapi.TYPE_STRING, example="Summer vacation"),
+                "status": openapi.Schema(type=openapi.TYPE_STRING, example="planned"),
+                "type": openapi.Schema(type=openapi.TYPE_STRING, example="vacation")
+            }),
+        }
+    ),
+    responses={
+        status.HTTP_201_CREATED: openapi.Response(
+            description="Setup completed successfully",
+        ),
+        status.HTTP_400_BAD_REQUEST: "Validation error"
     }
 )

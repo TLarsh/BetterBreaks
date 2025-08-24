@@ -2,13 +2,13 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
 from django.utils import timezone
-from .models import User, Client, DateEntry, WellbeingScore, BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP, WorkingPattern, OptimizationGoal, UserNotificationPreference, WellbeingQuestion
-from .validators import validate_password
+from .models import User, Client, DateEntry, WellbeingScore, BreakPlan, LeaveBalance, BreakPreferences, BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP, WorkingPattern, OptimizationGoal, UserNotificationPreference, WellbeingQuestion, Mood
+from .validators import validate_password, validate_leave_balance, validate_preferences, validate_break_plan
 from django.contrib.auth.hashers import make_password 
 from django.contrib.auth import get_user_model
 from core.utils import send_otp_email
 import random
-from datetime import datetime
+from datetime import datetime, date
 from uuid import UUID
 import pytz
 
@@ -296,23 +296,18 @@ class GamificationDataSerializer(serializers.ModelSerializer):
 
 
 # ------------BREAK PLAN SERIALIZZER--------------
-
 class BreakPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = BreakPlan
-        fields = [
-            "id", "startDate", "endDate", "description", "type", "status"
-        ]
+        fields = ['startDate', 'endDate', 'description', 'status', 'type']
 
-    def validate(self, attrs):
-        if attrs['endDate'] <= attrs['startDate']:
-            raise serializers.ValidationError({
-                "endDate": "End date must be after start date."
-            })
-        return attrs
+    def validate(self, data):
+        return validate_break_plan(data)
+
 
         # -----------------
 
+# ==========BREAK LIST SERIALIZERS===============
 class BreakPlanListSerializer(serializers.ModelSerializer):
     daysCount = serializers.SerializerMethodField()
     daysRemaining = serializers.SerializerMethodField()
@@ -340,15 +335,35 @@ class BreakPlanListSerializer(serializers.ModelSerializer):
 
 # ------------------
 
+# ==========BREAK PLAN UPDATE SERIALIZERS===============
 class BreakPlanUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = BreakPlan
         fields = ["startDate", "endDate", "description", "status"]
 
     def validate(self, data):
-        if data["endDate"] < data["startDate"]:
-            raise serializers.ValidationError("End date must be after start date.")
-        return data
+        return validate_break_plan(data)
+    
+
+
+# ==========BREAK LEAVE BALANCCE SERIALIZERS===============
+class LeaveBalanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LeaveBalance
+        fields = ['annual_leave_balance', 'annual_leave_refresh_date', 'already_used_balance']
+
+    def validate(self, data):
+        return validate_leave_balance(data)
+
+
+# ==========BREAK PREFERENCES SERIALIZERS===============
+class BreakPreferencesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BreakPreferences
+        fields = ['preference', 'weather_based_recommendation', 'to_be_confirmed']
+
+    def validate(self, data):
+        return validate_preferences(data)
 
 # ==========USER SETTINGS SERIALIZERS===============
 
@@ -412,3 +427,16 @@ class OptimizationGoalSerializer(serializers.ModelSerializer):
         model = OptimizationGoal
         fields = '__all__'
         read_only_fields = ('user',)
+
+
+
+# ======= Mood-SERILIZER ========
+class MoodCheckInSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Mood
+        fields = ["mood_type", "note"]
+
+class MoodHistorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Mood
+        fields = ["mood_type", "note", "created_at"]

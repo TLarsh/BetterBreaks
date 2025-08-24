@@ -1,7 +1,9 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.conf import settings
 from django.db import models
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.utils import timezone
+from datetime import date, timedelta
 from django.utils.text import slugify
 import uuid
 
@@ -213,6 +215,47 @@ class WellbeingQuestion(models.Model):
 
 # ----------------------------------------
 
+
+class LeaveBalance(models.Model):
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="leave_balance"
+    )
+    annual_leave_balance = models.PositiveIntegerField(default=0)
+    annual_leave_refresh_date = models.DateField()
+    already_used_balance = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def refresh_balance_if_due(self):
+        """Automatically refresh annual leave balance if today >= refresh date."""
+        today = date.today()
+        if today >= self.annual_leave_refresh_date:
+            self.annual_leave_balance = 60
+            self.already_used_balance = 0
+            self.annual_leave_refresh_date = date(
+                today.year + 1,
+                self.annual_leave_refresh_date.month,
+                self.annual_leave_refresh_date.day
+            )
+            self.save()
+
+    def deduct_days(self, days):
+        """Deduct days from balance."""
+        if days > self.annual_leave_balance:
+            raise ValueError("Insufficient leave balance.")
+        self.annual_leave_balance -= days
+        self.already_used_balance += days
+        self.save()
+
+    def save(self, *args, **kwargs):
+        self.refresh_balance_if_due()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.annual_leave_balance} days"
+# ----------------------------------------
+
 class BreakPlan(models.Model):
     BREAK_TYPES = [
         ('vacation', 'Vacation'),
@@ -228,7 +271,15 @@ class BreakPlan(models.Model):
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE
+    )
+    leave_balance = models.ForeignKey(
+        LeaveBalance,
+        on_delete=models.CASCADE,
+        related_name="break_plans"
+    )
     startDate = models.DateTimeField()
     endDate = models.DateTimeField()
     description = models.TextField()
@@ -237,8 +288,16 @@ class BreakPlan(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def save(self, *args, **kwargs):
+        """Deduct leave days when approved."""
+        if self.status == 'approved':
+            days_requested = (self.endDate.date() - self.startDate.date()).days + 1
+            self.leave_balance.deduct_days(days_requested)
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        return f"{self.user.username} - {self.type} ({self.startDate} to {self.endDate})"
+        return f"{self.user.username} - {self.type} ({self.startDate.date()} to {self.endDate.date()})"
+
 
 # ======== USER - NOTIFICATION =======
 
@@ -305,3 +364,55 @@ class OptimizationGoal(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.get_preference_display()}"
+
+
+class BreakPreferences(models.Model):
+    PREFERENCES = [
+        ('long_weekends', 'Long Weekends'),
+        ('extended_breaks', 'Extended Breaks'),
+        ('mix_of_both', 'Mix of Both'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='break_preferences'
+    )
+    preference = models.CharField(max_length=30, choices=PREFERENCES)
+    weather_based_recommendation = models.BooleanField(default=False)
+    to_be_confirmed = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Break Preference"
+        verbose_name_plural = "Break Preferences"
+        ordering = ['user']
+
+    def __str__(self):
+        return f"{self.user} - {self.get_preference_display()}"
+    
+
+
+
+class Mood(models.Model):
+    MOOD_CHOICES = [
+        ("happy", "Happy"),
+        ("sad", "Sad"),
+        ("angry", "Angry"),
+        ("neutral", "Neutral"),
+        ("excited", "Excited"),
+        ("anxious", "Anxious"),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="moods")
+    mood_type = models.CharField(max_length=20, choices=MOOD_CHOICES)
+    note = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user} - {self.mood_type} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+
+
+

@@ -279,36 +279,3 @@ def error_response(message="", errors=None, status_code=400):
         "data": None,
         "errors": normalized_errors
     }, status=status_code)
-
-
-
-
-def normalize(value):
-    """
-    Normalize empty values to None
-    """
-    if value in [None, {}, [], ""]:
-        return None
-    return value
-
-def success_response(message="", data=None, status_code=200):
-    return Response({
-        "message": message,
-        "status": True,
-        "data": normalize(data),
-        "errors": None
-    }, status=status_code)
-
-def error_response(message="", errors=None, status_code=400):
-    # Normalize all field values inside errors dict
-    normalized_errors = {
-        key: normalize(value)
-        for key, value in (errors or {}).items()
-    } if errors else None
-
-    return Response({
-        "message": message,
-        "status": False,
-        "data": None,
-        "errors": normalized_errors
-    }, status=status_code)

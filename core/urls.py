@@ -34,6 +34,8 @@ from .views import (
     UserSettingsView,
     NotificationPreferenceView,
     ScheduleView,
+    MoodCheckInView,
+    MoodHistoryView,
 )
 
 from drf_yasg.views import get_schema_view
@@ -52,6 +54,15 @@ schema_view = get_schema_view(
     public=True,
     # url="http://127.0.0.1:8000//",
     permission_classes=(permissions.AllowAny,),
+)
+from .swagger_api_fe import (
+    schedule_get_schema, 
+    schedule_post_schema, 
+    google_login_schema, 
+    facebook_login_schema, 
+    twitter_login_schema,
+    mood_checkin_schema,
+    mood_history_schema,
 )
 
 
@@ -100,6 +111,18 @@ urlpatterns = [
     path("api/user/settings", UserSettingsView.as_view(), name="user_settings"),
     path('api/user/notification-preferences', NotificationPreferenceView.as_view()),
     path("api/schedule", ScheduleView.as_view(), name="schedule"),
+
+
+    path(
+        "api/moods/checkin/",
+        MoodCheckInView.as_view(),
+        name='mood-checkin'
+    ),
+    path(
+        "api/moods/history/",
+        MoodHistoryView.as_view(),
+        name='mood-history'
+    ),
 
 ]
 

@@ -12,6 +12,7 @@ from .models import (
     OnboardingData,
     UserNotificationPreference,
     BreakPlan,
+    LeaveBalance,
 )
 
 # Custom Admin Configuration for User Model
@@ -184,6 +185,13 @@ class UserNotificationPreferenceAdmin(admin.ModelAdmin):
     )
     list_filter = ('breaksReminder', 'suggestions', 'deadlineAlerts', 'weeklyDigest', 'pushEnabled', 'emailEnabled')
     search_fields = ('user__email', 'user__username')
+
+# custom admin configuration for LeaveBalance Model
+@admin.register(LeaveBalance)
+class LeaveBalanceAdmin(admin.ModelAdmin):
+    list_display = ("annual_leave_balance", "already_used_balance", "annual_leave_refresh_date", "updated_at")
+    readonly_fields = ("updated_at",)
+    search_fields = ("anual_leave_balance",)
 
 # Register all models with custom configurations
 admin.site.register(User, UserAdmin)

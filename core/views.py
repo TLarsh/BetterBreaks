@@ -1,24 +1,22 @@
+from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
-from django.contrib.auth import get_user_model
-from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.authentication import BasicAuthentication
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
-from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Q, Avg
-from django.core.paginator import Paginator
 from rest_framework.exceptions import ValidationError as DRFValidationError
-from django.db import transaction, IntegrityError
-import traceback
-from datetime import timedelta
-from dateutil import parser as date_parser
-import random
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.db.models import Q, Avg
 from django.utils.timezone import now
-from datetime import datetime
+from django.core.paginator import Paginator
+from django.utils.dateparse import parse_date
+from django.shortcuts import get_object_or_404
+from django.contrib.auth import get_user_model
+from django.db import transaction, IntegrityError
+from django.core.exceptions import ValidationError as DjangoValidationError
+from datetime import timedelta, date, datetime
+from dateutil import parser as date_parser
 from .validators import validate_password
 from .serializers import (
     RegisterSerializer,
@@ -41,6 +39,7 @@ from .serializers import (
     BreakPlanSerializer,
     BreakPlanListSerializer,
     BreakPlanUpdateSerializer,
+    LeaveBalanceSerializer, BreakPreferencesSerializer, BreakPlanSerializer,
     # _____settingsSerializer___
     UserSettingsSerializer,
     # _____notificationSerializer___
@@ -49,6 +48,8 @@ from .serializers import (
     WorkingPatternSerializer,
     BlackOutDateSerializer,
     OptimizationGoalSerializer,
+    # _____Mood___
+    MoodCheckInSerializer, MoodHistorySerializer,
 
 )
 from .models import (
@@ -67,7 +68,8 @@ from .models import (
     BreakPlan,
     UserNotificationPreference,
     WorkingPattern,
-    OptimizationGoal
+    OptimizationGoal,
+    Mood,
 
 )
 from .swagger_api_fe import (
@@ -75,17 +77,21 @@ from .swagger_api_fe import (
     schedule_post_schema, 
     google_login_schema, 
     facebook_login_schema, 
-    twitter_login_schema
+    twitter_login_schema,
+    mood_checkin_schema,
+    mood_history_schema,
+    first_login_setup_docs,
 )
-import uuid
 from.helper import validate_and_create_user
 from .utils import (
     create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response,
 )
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-import traceback
 import logging
+import traceback
+import random
+import uuid
 
 # =======SOCIAL ALLAUTH ACCOUNT PROVIDERS=====
 # from drf_yasg.utils import swagger_auto_schema
@@ -913,6 +919,7 @@ class WellbeingQuestionView(APIView):
         serializer = WellbeingQuestionSerializer(questions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
+# --------------BLACKOUT DATES ------------------
 class AddBlackoutDateView(APIView):
     def post(self, request):
         if not request.user.is_authenticated:
@@ -1384,3 +1391,117 @@ class ScheduleView(APIView):
                     "traceback": traceback.format_exc().splitlines()
                 }
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+
+
+class MoodCheckInView(APIView):
+    permission_classes = [IsAuthenticated]
+    @mood_checkin_schema
+    def post(self, request):
+        serializer = MoodCheckInSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response({
+                "message": "Mood check-in successful",
+                "status": True,
+                "data": serializer.data,
+                "errors": None
+            }, status=status.HTTP_201_CREATED)
+        return Response({
+            "message": "Validation error",
+            "status": False,
+            "data": None,
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class MoodHistoryView(APIView):
+    permission_classes = [IsAuthenticated]
+    @mood_history_schema
+    def get(self, request):
+        start_date_str = request.query_params.get("start_date")
+        end_date_str = request.query_params.get("end_date")
+
+        moods = Mood.objects.filter(user=request.user)
+
+        if start_date_str:
+            start_date = parse_date(start_date_str)
+            if start_date:
+                moods = moods.filter(created_at__date__gte=start_date)
+
+        if end_date_str:
+            end_date = parse_date(end_date_str)
+            if end_date:
+                moods = moods.filter(created_at__date__lte=end_date)
+
+        serializer = MoodHistorySerializer(moods, many=True)
+        return Response({
+            "message": "Mood history retrieved successfully",
+            "status": True,
+            "data": serializer.data,
+            "errors": None
+        }, status=status.HTTP_200_OK)
+
+
+
+class FirstLoginSetupView(APIView):
+    """
+    Create LeaveBalance, Preferences, and optional BreakPlan for user
+    if they don't already exist.
+    """
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        payload = request.data
+        created_items = {}
+
+        # LEAVE BALANCE
+        if not hasattr(user, 'leave_balance'):
+            lb_data = payload.get('LeaveBalance', {})
+            lb_serializer = LeaveBalanceSerializer(data={
+                'annual_leave_balance': lb_data.get('annual_leave_balance', 60),
+                'annual_leave_refresh_date': lb_data.get('annual_leave_refresh_date', date.today()),
+                'already_used_balance': lb_data.get('already_used_balance', 0),
+            })
+            lb_serializer.is_valid(raise_exception=True)
+            leave_balance = lb_serializer.save(user=user)
+            created_items['LeaveBalance'] = lb_serializer.data
+        else:
+            created_items['LeaveBalance'] = "Already exists"
+
+        # PREFERENCES
+        if not user.break_preferences.exists():
+            pref_data = payload.get('Preferences', {})
+            pref_serializer = BreakPreferencesSerializer(data={
+                'preference': pref_data.get('preference', 'long_weekends'),
+                'weather_based_recommendation': pref_data.get('weather_based_recommendation', False),
+                'to_be_confirmed': pref_data.get('to_be_confirmed', False),
+            })
+            pref_serializer.is_valid(raise_exception=True)
+            preferences = pref_serializer.save(user=user)
+            created_items['Preferences'] = pref_serializer.data
+        else:
+            created_items['Preferences'] = "Already exists"
+
+        # BREAK PLAN
+        break_plan_data = payload.get('BreakPlan', {})
+        if break_plan_data.get('startDate') and break_plan_data.get('endDate'):
+            bp_serializer = BreakPlanSerializer(data={
+                'startDate': break_plan_data['startDate'],
+                'endDate': break_plan_data['endDate'],
+                'description': break_plan_data.get('description', ''),
+                'status': break_plan_data.get('status', 'planned'),
+                'type': break_plan_data.get('type', 'vacation'),
+            })
+            bp_serializer.is_valid(raise_exception=True)
+            break_plan = bp_serializer.save(user=user, leave_balance=user.leave_balance)
+            created_items['BreakPlan'] = bp_serializer.data
+        else:
+            created_items['BreakPlan'] = "Not created - startDate & endDate required"
+
+        return success_response(
+            message="Setup complete",
+            data=created_items,
+            status_code=status.HTTP_201_CREATED
+        )
