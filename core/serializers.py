@@ -296,13 +296,27 @@ class GamificationDataSerializer(serializers.ModelSerializer):
 
 
 # ------------BREAK PLAN SERIALIZZER--------------
+
+
 class BreakPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = BreakPlan
-        fields = ['startDate', 'endDate', 'description', 'status', 'type']
+        fields = '__all__'
+        read_only_fields = ["user", "leave_balance"]
 
-    def validate(self, data):
-        return validate_break_plan(data)
+    def create(self, validated_data):
+        user = self.context['request'].user
+        leave_balance, _ = LeaveBalance.objects.get_or_create(
+            user=user,
+            defaults={
+                "anual_leave_balance": 60,
+                "anual_leave_refresh_date": date.today().replace(year=date.today().year + 1),
+                "already_used_balance": 0,
+            }
+        )
+        validated_data['user'] = user
+        validated_data['leave_balance'] = leave_balance
+        return super().create(validated_data)
 
 
         # -----------------
@@ -350,7 +364,7 @@ class BreakPlanUpdateSerializer(serializers.ModelSerializer):
 class LeaveBalanceSerializer(serializers.ModelSerializer):
     class Meta:
         model = LeaveBalance
-        fields = ['annual_leave_balance', 'annual_leave_refresh_date', 'already_used_balance']
+        fields = ['anual_leave_balance', 'anual_leave_refresh_date', 'already_used_balance']
 
     def validate(self, data):
         return validate_leave_balance(data)

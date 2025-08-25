@@ -951,9 +951,9 @@ class CreateBreakPlanView(APIView):
 
     @swagger_auto_schema(request_body=BreakPlanSerializer)
     def post(self, request):
-        serializer = BreakPlanSerializer(data=request.data)
+        serializer = BreakPlanSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
-            break_plan = serializer.save(user=request.user)
+            break_plan = serializer.save()
             return Response({
                 "message": "Break plan created successfully.",
                 "status": True,
@@ -967,6 +967,7 @@ class CreateBreakPlanView(APIView):
             "data": None,
             "errors": serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class ListUserBreakPlansView(APIView):

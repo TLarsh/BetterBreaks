@@ -220,31 +220,32 @@ class LeaveBalance(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="leave_balance"
+        related_name="leave_balance",
+        unique=True
     )
-    annual_leave_balance = models.PositiveIntegerField(default=0)
-    annual_leave_refresh_date = models.DateField()
+    anual_leave_balance = models.PositiveIntegerField(default=60)
+    anual_leave_refresh_date = models.DateField()
     already_used_balance = models.PositiveIntegerField(default=0)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     def refresh_balance_if_due(self):
         """Automatically refresh annual leave balance if today >= refresh date."""
         today = date.today()
-        if today >= self.annual_leave_refresh_date:
-            self.annual_leave_balance = 60
+        if today >= self.anual_leave_refresh_date:
+            self.anual_leave_balance = 60
             self.already_used_balance = 0
-            self.annual_leave_refresh_date = date(
+            self.anual_leave_refresh_date = date(
                 today.year + 1,
-                self.annual_leave_refresh_date.month,
-                self.annual_leave_refresh_date.day
+                self.anual_leave_refresh_date.month,
+                self.anual_leave_refresh_date.day
             )
             self.save()
 
     def deduct_days(self, days):
-        """Deduct days from balance."""
-        if days > self.annual_leave_balance:
-            raise ValueError("Insufficient leave balance.")
-        self.annual_leave_balance -= days
+        if days > self.anual_leave_balance:
+            raise ValueError("Not enough leave balance")
+        self.anual_leave_balance -= days
         self.already_used_balance += days
         self.save()
 
@@ -253,7 +254,8 @@ class LeaveBalance(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.username} - {self.annual_leave_balance} days"
+        return f"{self.user.username} - {self.anual_leave_balance} days left"
+
 # ----------------------------------------
 
 class BreakPlan(models.Model):
