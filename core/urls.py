@@ -34,6 +34,7 @@ from .views import (
     UserSettingsView,
     NotificationPreferenceView,
     ScheduleView,
+    FirstLoginSetupView,
     MoodCheckInView,
     MoodHistoryView,
 )
@@ -111,7 +112,7 @@ urlpatterns = [
     path("api/user/settings", UserSettingsView.as_view(), name="user_settings"),
     path('api/user/notification-preferences', NotificationPreferenceView.as_view()),
     path("api/schedule", ScheduleView.as_view(), name="schedule"),
-
+    path("api/onboarding/set/", FirstLoginSetupView.as_view(), name="onboarding"),
 
     path(
         "api/moods/checkin/",
