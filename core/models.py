@@ -417,4 +417,41 @@ class Mood(models.Model):
         return f"{self.user} - {self.mood_type} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
 
 
+##########################
+# Events and bookings
+###########################
+class Event(models.Model):
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    location = models.CharField(max_length=255)
+    start_date = models.DateTimeField()
+    end_date = models.DateTimeField()
+    price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    capacity = models.PositiveIntegerField(default=0)
+    image = models.ImageField(upload_to="events/", blank=True, null=True)  # NEW field
 
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.title
+
+
+class Booking(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="bookings")
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name="bookings")
+    booked_at = models.DateTimeField(auto_now_add=True)
+    is_paid = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.event.title}"
+
+
+class Payment(models.Model):
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name="payment")
+    reference = models.CharField(max_length=255, unique=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=50, choices=[("pending", "Pending"), ("success", "Success"), ("failed", "Failed")], default="pending")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Payment {self.reference} - {self.status}"

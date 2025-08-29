@@ -170,6 +170,57 @@ def fetch_weather_data(latitude, longitude, date):
         return response.json()
     return None
 
+
+# def fetch_8day_weather_forecast_openweathermap(latitude, longitude):
+#     """
+#     Fetch 8-day daily weather forecast from OpenWeatherMap.
+#     Returns a list of daily forecast dicts.
+#     """
+#     # api_key = "6291107705516e94ac5df05f71e1f5de"  # Replace with your actual API key
+#     # url = "https://api.openweathermap.org/data/3.0/onecall" 
+#     # url = "https://api.openweathermap.org/data/2.5/onecall" # Free tier endpoint
+#     api_key = "dVVfPHo3rD9oENOkcvjKKQSQXoKLVzGn"  # Replace with your actual API key
+#     url = "https://api.tomorrow.io/v4/weather/forecast"
+#     params = {
+#         "lat": latitude,
+#         "lon": longitude,
+#         "exclude": "minutely,hourly,alerts,current",
+#         "units": "metric",
+#         "appid": api_key,
+#     }
+#     response = requests.get(url, params=params)
+#     print("Status:", response.status_code)
+#     print("Response:", response.text)  
+#     if response.status_code == 200:
+#         data = response.json()
+#         return data.get("daily", [])  # List of 8 daily forecast dicts
+#     return []
+
+def fetch_6day_weather_forecast_openweathermap(latitude, longitude):
+    """
+    Fetch 6-day daily weather forecast from OpenWeatherMap.
+    Returns a list of daily forecast dicts.
+    """
+    # api_key = "6291107705516e94ac5df05f71e1f5de"  # Replace with your actual API key
+    # url = "https://api.openweathermap.org/data/3.0/onecall" 
+    # url = "https://api.openweathermap.org/data/2.5/onecall" # Free tier endpoint
+    api_key = "dVVfPHo3rD9oENOkcvjKKQSQXoKLVzGn"  # Replace with your actual API key
+    url = "https://api.tomorrow.io/v4/weather/forecast"
+    params = {
+        "location": f"{latitude},{longitude}",
+        "timesteps": "1d",
+        "apikey": api_key,
+        "units": "metric",
+    }
+    response = requests.get(url, params=params)
+    print("Status:", response.status_code)
+    print("Response:", response.text)  
+    if response.status_code == 200:
+        data = response.json()
+        # return data.get("daily", [])  # List of 8 daily forecast dicts
+        return data.get("timelines", {}).get("daily", [])
+    return []
+
 def adjust_score_based_on_weather(score, weather_data):
     """
     Adjust the holiday score based on weather conditions.

@@ -2,7 +2,12 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
 from django.utils import timezone
-from .models import User, Client, DateEntry, WellbeingScore, BreakPlan, LeaveBalance, BreakPreferences, BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,PublicHoliday,GamificationData, PasswordResetOTP, WorkingPattern, OptimizationGoal, UserNotificationPreference, WellbeingQuestion, Mood
+from .models import (User, Client, DateEntry, 
+WellbeingScore, BreakPlan, LeaveBalance, BreakPreferences, 
+BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,
+PublicHoliday,GamificationData, PasswordResetOTP, WorkingPattern, 
+OptimizationGoal, UserNotificationPreference, WellbeingQuestion, Mood,
+Event, Booking)
 from .validators import validate_password, validate_leave_balance, validate_preferences, validate_break_plan
 from django.contrib.auth.hashers import make_password 
 from django.contrib.auth import get_user_model
@@ -454,3 +459,63 @@ class MoodHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Mood
         fields = ["mood_type", "note", "created_at"]
+
+
+# ======= Weather-SERILIZER ========
+
+class WeatherForecastDaySerializer(serializers.Serializer):
+    time = serializers.CharField()
+    values = serializers.DictField()
+
+
+
+########################################
+######Event and Booking Serializers######
+
+
+
+class EventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Event
+        fields = [
+            "id",
+            "title",
+            "description",
+            "location",
+            "start_date",
+            "end_date",
+            "price",
+            "image",
+            "created_at",
+            "updated_at",
+        ]
+
+
+class BookingSerializer(serializers.ModelSerializer):
+    event = EventSerializer(read_only=True)
+
+    class Meta:
+        model = Booking
+        fields = [
+            "id",
+            "event",
+            "user",
+            "is_paid",
+            "created_at",
+        ]
+        read_only_fields = ["user", "is_paid", "created_at"]
+
+
+class PaymentSerializer(serializers.Serializer):
+    """
+    Serializer for payment initiation and verification
+    """
+    booking_id = serializers.IntegerField(required=True)
+    reference = serializers.CharField(read_only=True)
+    amount = serializers.DecimalField(
+        max_digits=10, decimal_places=2, read_only=True
+    )
+    status = serializers.CharField(read_only=True)
+    authorization_url = serializers.CharField(read_only=True)
+
+###################################################

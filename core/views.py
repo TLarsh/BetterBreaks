@@ -50,6 +50,10 @@ from .serializers import (
     OptimizationGoalSerializer,
     # _____Mood___
     MoodCheckInSerializer, MoodHistorySerializer,
+    # _____Events___
+    EventSerializer, BookingSerializer,
+    #_____Weather___
+    WeatherForecastDaySerializer,
 
 )
 from .models import (
@@ -71,7 +75,10 @@ from .models import (
     OptimizationGoal,
     Mood,
 
+    Event, Booking
+
 )
+
 from .swagger_api_fe import (
     schedule_get_schema, 
     schedule_post_schema, 
@@ -81,17 +88,26 @@ from .swagger_api_fe import (
     mood_checkin_schema,
     mood_history_schema,
     first_login_setup_docs,
+    event_list_docs,
+    book_event_docs,
+    weather_forecast_schema,
+    initiate_payment_docs,
+    verify_payment_docs,
 )
 from.helper import validate_and_create_user
 from .utils import (
-    create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response,
+    create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response, fetch_6day_weather_forecast_openweathermap,
 )
+from .payments import PaystackGateway
+
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 import logging
 import traceback
 import random
 import uuid
+
+
 
 # =======SOCIAL ALLAUTH ACCOUNT PROVIDERS=====
 # from drf_yasg.utils import swagger_auto_schema
@@ -1506,3 +1522,116 @@ class FirstLoginSetupView(APIView):
             data=created_items,
             status_code=status.HTTP_201_CREATED
         )
+
+
+class WeatherForecastView(APIView):
+    @weather_forecast_schema
+    def get(self, request):
+        lat = request.query_params.get("lat")
+        lon = request.query_params.get("lon")
+        if not lat or not lon:
+            return Response({"detail": "lat and lon are required."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            lat = float(lat)
+            lon = float(lon)
+        except ValueError:
+            return Response({"detail": "lat and lon must be valid numbers."}, status=status.HTTP_400_BAD_REQUEST)
+        forecast = fetch_6day_weather_forecast_openweathermap(lat, lon)
+        serializer = WeatherForecastDaySerializer(forecast, many=True)
+        return Response(serializer.data)
+
+
+
+
+#######################
+# ======= EVENTS & BOOKINGS =======
+#######################
+class EventListView(APIView):
+    permission_classes = [AllowAny]
+
+    @event_list_docs
+    def get(self, request):
+        events = Event.objects.all()
+
+        # Filters
+        title = request.query_params.get("title")
+        location = request.query_params.get("location")
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+
+        if title:
+            events = events.filter(title__icontains=title)
+        if location:
+            events = events.filter(location__icontains=location)
+        if start_date and end_date:
+            events = events.filter(start_date__gte=start_date, end_date__lte=end_date)
+
+        serializer = EventSerializer(events, many=True)
+        return Response({
+            "message": "Events retrieved successfully",
+            "status": True,
+            "data": serializer.data,
+            "errors": None
+        }, status=status.HTTP_200_OK)
+
+
+class BookEventView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @book_event_docs
+    def post(self, request, event_id):
+        event = get_object_or_404(Event, id=event_id)
+        booking = Booking.objects.create(user=request.user, event=event)
+        serializer = BookingSerializer(booking)
+
+        return Response({
+            "message": "Event booked successfully. Proceed to payment.",
+            "status": True,
+            "data": serializer.data,
+            "errors": None
+        }, status=status.HTTP_201_CREATED)
+
+
+class InitiatePaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @initiate_payment_docs
+    def post(self, request, booking_id):
+        try:
+            booking = Booking.objects.get(id=booking_id, user=request.user)
+        except Booking.DoesNotExist:
+            return Response({
+                "message": "Booking not found.",
+                "status": False,
+                "data": None,
+                "errors": {"booking_id": "Invalid or unauthorized booking"}
+            }, status=404)
+
+        return PaystackGateway.initiate_payment(booking)
+
+
+class VerifyPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @verify_payment_docs
+    def post(self, request, booking_id):
+        reference = request.data.get("reference")
+        if not reference:
+            return Response({
+                "message": "Payment reference is required.",
+                "status": False,
+                "data": None,
+                "errors": {"reference": "This field is required"}
+            }, status=400)
+
+        try:
+            booking = Booking.objects.get(id=booking_id, user=request.user)
+        except Booking.DoesNotExist:
+            return Response({
+                "message": "Booking not found.",
+                "status": False,
+                "data": None,
+                "errors": {"booking_id": "Invalid or unauthorized booking"}
+            }, status=404)
+
+        return PaystackGateway.verify_payment(reference, booking)

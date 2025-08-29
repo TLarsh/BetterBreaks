@@ -33,7 +33,7 @@
 
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .serializers import MoodCheckInSerializer, MoodHistorySerializer, LeaveBalanceSerializer, BreakPreferencesSerializer, BreakPlanSerializer
+from .serializers import MoodCheckInSerializer, MoodHistorySerializer, LeaveBalanceSerializer, BreakPreferencesSerializer, BreakPlanSerializer, EventSerializer, BookingSerializer
 from rest_framework import status
 
 
@@ -301,4 +301,121 @@ first_login_setup_docs = swagger_auto_schema(
         ),
         status.HTTP_400_BAD_REQUEST: "Validation error"
     }
+)
+
+
+
+
+# ---- Events ----
+event_list_docs = swagger_auto_schema(
+    operation_summary="List all events",
+    operation_description="Retrieve all events with optional filters for title, location, and date range.",
+    manual_parameters=[
+        openapi.Parameter("title", openapi.IN_QUERY, description="Filter by title", type=openapi.TYPE_STRING),
+        openapi.Parameter("location", openapi.IN_QUERY, description="Filter by location", type=openapi.TYPE_STRING),
+        openapi.Parameter("start_date", openapi.IN_QUERY, description="Filter by start date (YYYY-MM-DD)", type=openapi.TYPE_STRING),
+        openapi.Parameter("end_date", openapi.IN_QUERY, description="Filter by end date (YYYY-MM-DD)", type=openapi.TYPE_STRING),
+    ],
+    responses={200: EventSerializer(many=True)}
+)
+
+
+# ---- Bookings ----
+book_event_docs = swagger_auto_schema(
+    operation_summary="Book an event",
+    operation_description="Authenticated users can book an event by providing the event ID in the URL.",
+    responses={201: BookingSerializer()}
+)
+
+
+# ---- Payments ----
+from drf_yasg import openapi
+from drf_yasg.utils import swagger_auto_schema
+
+# --- Payment Annotations ---
+
+initiate_payment_docs = swagger_auto_schema(
+    operation_summary="Initiate Payment",
+    operation_description="Starts a payment process for a booking using Paystack.",
+    responses={
+        200: openapi.Response(
+            description="Payment initiation successful",
+            examples={
+                "application/json": {
+                    "message": "Payment initiated successfully",
+                    "status": True,
+                    "data": {
+                        "authorization_url": "https://checkout.paystack.com/xyz123",
+                        "access_code": "xyz123",
+                        "reference": "ref123"
+                    },
+                    "errors": None
+                }
+            },
+        ),
+        404: openapi.Response(description="Booking not found"),
+    }
+)
+
+verify_payment_docs = swagger_auto_schema(
+    operation_summary="Verify Payment",
+    operation_description="Verifies a Paystack payment and updates booking/payment status.",
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            "reference": openapi.Schema(type=openapi.TYPE_STRING, description="Paystack payment reference"),
+        },
+        required=["reference"],
+    ),
+    responses={
+        200: openapi.Response(
+            description="Payment verification successful",
+            examples={
+                "application/json": {
+                    "message": "Payment verified successfully",
+                    "status": True,
+                    "data": {"status": "success"},
+                    "errors": None
+                }
+            },
+        ),
+        400: openapi.Response(description="Missing or invalid reference"),
+        404: openapi.Response(description="Booking not found"),
+    }
+)
+
+
+##### Weather Forecast Swagger #####
+
+
+weather_forecast_params = [
+    openapi.Parameter(
+        'lat', openapi.IN_QUERY, description="Latitude", type=openapi.TYPE_NUMBER, required=True
+    ),
+    openapi.Parameter(
+        'lon', openapi.IN_QUERY, description="Longitude", type=openapi.TYPE_NUMBER, required=True
+    ),
+]
+
+weather_forecast_response = openapi.Response(
+    description="8-day weather forecast",
+    examples={
+        "application/json": [
+            {
+                "dt": 1692979200,
+                "sunrise": 1692957600,
+                "sunset": 1693004400,
+                "temp": {"day": 28.5, "min": 24.0, "max": 30.0},
+                "weather": [{"id": 500, "main": "Rain", "description": "light rain"}],
+                # ...other fields...
+            },
+            # ... up to 8 items ...
+        ]
+    }
+)
+
+weather_forecast_schema = swagger_auto_schema(
+    manual_parameters=weather_forecast_params,
+    responses={200: weather_forecast_response},
+    operation_description="Get 8-day weather forecast for a given latitude and longitude."
 )

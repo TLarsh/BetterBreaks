@@ -37,7 +37,13 @@ from .views import (
     FirstLoginSetupView,
     MoodCheckInView,
     MoodHistoryView,
+    WeatherForecastView,
+    EventListView,
+    InitiatePaymentView,
+    VerifyPaymentView,
 )
+# from .payments import InitializePaymentView, VerifyPaymentView, PaystackWebhookView
+
 
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
@@ -114,6 +120,8 @@ urlpatterns = [
     path("api/schedule", ScheduleView.as_view(), name="schedule"),
     path("api/onboarding/set/", FirstLoginSetupView.as_view(), name="onboarding"),
 
+    path("api/weather/forecast/", WeatherForecastView.as_view(), name="weather-forecast"),
+
     path(
         "api/moods/checkin/",
         MoodCheckInView.as_view(),
@@ -124,6 +132,14 @@ urlpatterns = [
         MoodHistoryView.as_view(),
         name='mood-history'
     ),
+
+    # path("events/", EventListView.as_view(), name="list_events"),
+    
+    # --- Payments ---
+    path("api/bookings/<int:booking_id>/payments/initiate/", InitiatePaymentView.as_view(), name="initiate-payment"),
+    path("api/bookings/<int:booking_id>/payments/verify/", VerifyPaymentView.as_view(), name="verify-payment"),
+    # path("api/payments/webhook/", PaystackWebhookView.as_view(), name="paystack-webhook"),
+
 
 ]
 
