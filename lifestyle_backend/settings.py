@@ -139,6 +139,7 @@ PAYSTACK_PUBLIC_KEY = os.getenv("PAYSTACK_PUBLIC_KEY")
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
+
     "allauth.account.middleware.AccountMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -246,7 +247,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = BASE_DIR / "media" 
+MEDIA_ROOT = os.path.join(BASE_DIR, "media") 
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
