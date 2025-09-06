@@ -88,6 +88,22 @@ class LogoutSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid or expired refresh token")
         return value
 
+
+
+class GoogleLoginSerializer(serializers.Serializer):
+    token = serializers.CharField(required=True)
+
+
+class TwitterLoginSerializer(serializers.Serializer):
+    provider_id = serializers.CharField(required=True)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
+
+
+class AppleLoginSerializer(serializers.Serializer):
+    provider_id = serializers.CharField(required=True)
+    email = serializers.EmailField(required=False, allow_blank=True, allow_null=True)
+    
+
 # class UserSerializer(serializers.ModelSerializer):
 #     """
 #     Serializer for user profile data.

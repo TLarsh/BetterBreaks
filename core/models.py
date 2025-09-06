@@ -67,6 +67,30 @@ class User(AbstractBaseUser, PermissionsMixin):
             'refresh': str(refresh),
             'access': str(refresh.access_token)
         }
+
+class SocialAccount(models.Model):
+    PROVIDER_CHOICES = [
+        ("google", "Google"),
+        ("twitter", "Twitter"),
+        ("apple", "Apple"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, related_name="social_accounts", on_delete=models.CASCADE)
+    provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
+    provider_id = models.CharField(max_length=255, db_index=True)  # unique ID from provider
+    email = models.EmailField(blank=True, null=True)
+    extra_data = models.JSONField(default=dict, blank=True)
+    last_login = models.DateTimeField(null=True, blank=True)  # track last login from this provider
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("provider", "provider_id")
+        indexes = [models.Index(fields=["provider", "provider_id"])]
+
+    def __str__(self):
+        return f"{self.provider} | {self.user.email}"
+
 # User Settings Table
 
 class UserSettings(models.Model):

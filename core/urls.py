@@ -42,6 +42,7 @@ from .views import (
     InitiatePaymentView,
     VerifyPaymentView,
 )
+from .social import AppleLoginView, TwitterLoginView, GoogleLoginView
 # from .payments import InitializePaymentView, VerifyPaymentView, PaystackWebhookView
 
 
@@ -88,7 +89,9 @@ urlpatterns = [
     # path("api/auth/facebook/", FacebookLoginView.as_view(), name="facebook-login"),
     # path("api/auth/twitter/", TwitterLoginView.as_view(), name="twitter-login"),
 
-
+    path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
+    path("api/auth/twitter/", TwitterLoginView.as_view(), name="twitter-login"),
+    path("api/auth/apple/", AppleLoginView.as_view(), name="apple-login"),
 
     path('api/dates/', DateListView.as_view(), name='dates'),       # Ensure 'dates' matches test
     path('api/blackout-dates/', BlackoutDatesView.as_view(), name='blackout_dates'),
