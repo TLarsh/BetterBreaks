@@ -18,24 +18,20 @@ from .models import (
 # Custom Admin Configuration for User Model
 class UserAdmin(admin.ModelAdmin):
     list_display = (
-        "username",
+        "full_name",
         "email",
-        "first_name",
-        "last_name",
         "is_active",
         "date_joined",
     )
     list_filter = ("is_active", "date_joined")
-    search_fields = ("username", "email", "first_name", "last_name")
+    search_fields = ("full_name", "email")
     fieldsets = [
         (
             "Personal Info",
             {
                 "fields": [
-                    "username",
+                    "full_name",
                     "email",
-                    "first_name",
-                    "last_name",
                     "profile_picture_path",
                 ]
             },

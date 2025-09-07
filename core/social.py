@@ -47,7 +47,7 @@ class GoogleLoginView(APIView):
 
         # Find or create user
         user, _ = User.objects.get_or_create(
-            email=email, defaults={"username": email.split("@")[0]}
+            email=email, defaults={"full_name": ""}
         )
 
         # Link or update social account
@@ -76,7 +76,7 @@ class GoogleLoginView(APIView):
                 "refresh": tokens["refresh"],
                 "access": tokens["access"],
                 "email": user.email,
-                "username": user.username,
+                "full_name": user.full_name,
                 "provider": "google",
             },
         )
@@ -101,7 +101,7 @@ class TwitterLoginView(APIView):
         # Find or create user
         user, _ = User.objects.get_or_create(
             email=email,
-            defaults={"username": email.split("@")[0] if email else f"tw_{provider_id}"},
+            defaults={"full_name": ""},
         )
 
         # Link or update social account
@@ -130,7 +130,7 @@ class TwitterLoginView(APIView):
                 "refresh": tokens["refresh"],
                 "access": tokens["access"],
                 "email": user.email,
-                "username": user.username,
+                "full_name": user.full_name,
                 "provider": "twitter",
             },
         )
@@ -156,7 +156,7 @@ class AppleLoginView(APIView):
         user, _ = User.objects.get_or_create(
             email=email,
             defaults={
-                "username": email.split("@")[0] if email else f"apple_{provider_id}"
+                "full_name": ""
             },
         )
 
@@ -186,7 +186,7 @@ class AppleLoginView(APIView):
                 "refresh": tokens["refresh"],
                 "access": tokens["access"],
                 "email": user.email,
-                "username": user.username,
+                "full_name": user.full_name,
                 "provider": "apple",
             },
         )

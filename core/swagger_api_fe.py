@@ -134,7 +134,7 @@ google_login_schema = swagger_auto_schema(
                         "refresh": "your_refresh_token",
                         "access": "your_access_token",
                         "email": "user@example.com",
-                        "username": "johndoe"
+                        "full_name": "John Doe"
                     },
                     "errors": None
                 }
@@ -171,7 +171,7 @@ facebook_login_schema = swagger_auto_schema(
                         "refresh": "your_refresh_token",
                         "access": "your_access_token",
                         "email": "user@example.com",
-                        "username": "johndoe"
+                        "full_name": "John Doe"
                     },
                     "errors": None
                 }
@@ -212,7 +212,7 @@ twitter_login_schema = swagger_auto_schema(
                         "refresh": "your_refresh_token",
                         "access": "your_access_token",
                         "email": "user@example.com",
-                        "username": "johndoe"
+                        "full_name": "John Doe"
                     },
                     "errors": None
                 }

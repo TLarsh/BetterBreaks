@@ -21,11 +21,11 @@ import pytz
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True)
     password_confirmation = serializers.CharField(write_only=True)
-    username = serializers.CharField(required=False, allow_blank=True, help_text="Optional username")
+    full_name = serializers.CharField(required=False, allow_blank=True, help_text="Optional full name")
 
     class Meta:
         model = User
-        fields = ["email", "username", "password", "password_confirmation"]
+        fields = ["email", "full_name", "password", "password_confirmation"]
         extra_kwargs = {
             "email": {"required": True, "help_text": "Email address for registration"},
             "password": {"help_text": "Password (will be validated against Django's password rules)"},
@@ -42,28 +42,24 @@ class RegisterSerializer(serializers.ModelSerializer):
         validated_data.pop("password_confirmation", None)
         return User.objects.create_user(
             email=validated_data["email"],
-            username=validated_data.get("username"),
+            full_name=validated_data.get("full_name"),
             password=validated_data["password"]
         )
 
 class LoginSerializer(serializers.Serializer):
     """
     Serializer for user login.
-    Accepts email or username and returns a token upon successful authentication.
+    Accepts email and returns a token upon successful authentication.
     """
-    email_or_username = serializers.CharField()
+    email = serializers.EmailField()
     password = serializers.CharField()
 
     def validate(self, data):
-        email_or_username = data["email_or_username"]
+        email = data["email"]
         password = data["password"]
 
-        # Find user by email or username
-        user = None
-        if "@" in email_or_username:
-            user = User.objects.filter(email=email_or_username).first()
-        else:
-            user = User.objects.filter(username=email_or_username).first()
+        # Find user by email
+        user = User.objects.filter(email=email).first()
 
         # Verify credentials
         if user and user.check_password(password):
@@ -113,7 +109,7 @@ class AppleLoginSerializer(serializers.Serializer):
 #         model = User
 #         fields = [
 #             "id",
-#             "username",
+#             "full_name",
 #             "email",
 #             "first_name",
 #             "last_name",
@@ -136,10 +132,8 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id",
-            "username",
+            "full_name",
             "email",
-            "first_name",
-            "last_name",
             "profile_picture_path",
             "holiday_days",
             "birthday",

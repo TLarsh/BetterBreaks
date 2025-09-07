@@ -89,15 +89,18 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-#  Allauth new settings format
-ACCOUNT_LOGIN_METHODS = {"email"}  # Only allow login via email
+#  Allauth settings
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 
 # Fields required for signup (`*` means required)
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 
 ACCOUNT_EMAIL_VERIFICATION = "optional"  # or 'mandatory'
 ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
-ACCOUNT_UNIQUE_EMAIL = True
 # Optional: disable session login for APIs (JWT-based)
 ACCOUNT_SESSION_REMEMBER = False
 # ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = True

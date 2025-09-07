@@ -58,7 +58,7 @@ class BaseSocialLoginView(SocialLoginView):
                         "refresh": tokens["refresh"],
                         "access": tokens["access"],
                         "email": user.email,
-                        "username": user.username,
+                        "full_name": user.full_name,
                         "provider": self.adapter_class.provider_id
                     }
                 )

@@ -31,7 +31,7 @@ def validate_and_create_user(data):
     # Create user
     user = User.objects.create_user(
         email=serializer.validated_data["email"],
-        username=serializer.validated_data.get("username", ""),
+        full_name=serializer.validated_data.get("full_name", ""),
         password=password
     )
 

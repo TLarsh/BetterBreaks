@@ -8,23 +8,18 @@ from django.utils.text import slugify
 import uuid
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, password=None, username=None, **extra_fields):
+    def create_user(self, email, password=None, full_name=None, **extra_fields):
         if not email:
             raise ValueError("The Email field must be set")
         
         email = self.normalize_email(email)
 
-        # Auto-generate username if not provided
-        if not username:
-            base_username = email.split('@')[0]
-            username = slugify(base_username) or str(uuid.uuid4())[:8]
-
-        user = self.model(email=email, username=username, **extra_fields)
+        user = self.model(email=email, full_name=full_name, **extra_fields)
         user.set_password(password)
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password=None, username=None, **extra_fields):
+    def create_superuser(self, email, password=None, full_name=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
 
@@ -33,14 +28,12 @@ class UserManager(BaseUserManager):
         if extra_fields.get("is_superuser") is not True:
             raise ValueError("Superuser must have is_superuser=True.")
 
-        return self.create_user(email=email, password=password, username=username, **extra_fields)
+        return self.create_user(email=email, password=password, full_name=full_name, **extra_fields)
 
 class User(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    username = models.CharField(max_length=100, unique=True, null=True, blank=True)
+    full_name = models.CharField(max_length=255, null=True, blank=True)
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=100, null=True, blank=True)
-    last_name = models.CharField(max_length=100, null=True, blank=True)
     profile_picture_path = models.CharField(max_length=255, null=True, blank=True)
     holiday_days = models.PositiveIntegerField(null=True, blank=True)
     birthday = models.DateTimeField(null=True, blank=True)
@@ -56,10 +49,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = UserManager()
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = ["username"]
+    REQUIRED_FIELDS = []
 
     def __str__(self):
-        return self.username
+        return self.email if not self.full_name else self.full_name
     
     def tokens(self):
         refresh = RefreshToken.for_user(self)
@@ -186,7 +179,7 @@ class OnboardingData(models.Model):
     survey_results = models.JSONField(null=False, blank=False)
 
     def __str__(self):
-        return f"Onboarding data for {self.user.username}"
+        return f"Onboarding data for {self.user.full_name if self.user.full_name else self.user.email}"
     
 # Action Data Table
 class ActionData(models.Model):
@@ -199,7 +192,7 @@ class ActionData(models.Model):
     action_duration_seconds = models.PositiveIntegerField(null=False, blank=False)
 
     def __str__(self):
-        return f"Action by {self.user.username if self.user else 'Unknown'}"
+        return f"Action by {self.user.full_name if self.user and self.user.full_name else (self.user.email if self.user else 'Unknown')}"
     
 # Wellbeing Score Table
 class WellbeingScore(models.Model):
@@ -210,7 +203,7 @@ class WellbeingScore(models.Model):
     score_type = models.CharField(max_length=100, null=True, blank=True)
 
     def __str__(self):
-        return f"Wellbeing score for {self.user.username} on {self.score_date}"
+        return f"Wellbeing score for {self.user.full_name if self.user.full_name else self.user.email} on {self.score_date}"
     
 class PublicHoliday(models.Model):
     country_code = models.CharField(max_length=10, null=False, blank=False)
@@ -229,7 +222,7 @@ class GamificationData(models.Model):
     badges = models.JSONField(default=list)  # List of earned badges
 
     def __str__(self):
-        return f"Gamification data for {self.user.username}"
+        return f"Gamification data for {self.user.full_name if self.user.full_name else self.user.email}"
     
 
 class WellbeingQuestion(models.Model):
@@ -278,7 +271,7 @@ class LeaveBalance(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.username} - {self.anual_leave_balance} days left"
+        return f"{self.user.full_name if self.user.full_name else self.user.email} - {self.anual_leave_balance} days left"
 
 # ----------------------------------------
 
@@ -322,7 +315,7 @@ class BreakPlan(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.user.username} - {self.type} ({self.startDate.date()} to {self.endDate.date()})"
+        return f"{self.user.full_name if self.user.full_name else self.user.email} - {self.type} ({self.startDate.date()} to {self.endDate.date()})"
 
 
 # ======== USER - NOTIFICATION =======
@@ -389,7 +382,7 @@ class OptimizationGoal(models.Model):
         unique_together = ('user', 'preference')
 
     def __str__(self):
-        return f"{self.user.username} - {self.get_preference_display()}"
+        return f"{self.user.full_name if self.user.full_name else self.user.email} - {self.get_preference_display()}"
 
 
 class BreakPreferences(models.Model):
@@ -467,7 +460,7 @@ class Booking(models.Model):
     is_paid = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"{self.user.username} - {self.event.title}"
+        return f"{self.user.full_name if self.user.full_name else self.user.email} - {self.event.title}"
 
 
 class Payment(models.Model):

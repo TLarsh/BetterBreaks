@@ -133,7 +133,7 @@ class RegisterView(APIView):
     @swagger_auto_schema(
         request_body=RegisterSerializer,
         operation_summary="Register a new user",
-        operation_description="Registers a new user with email, optional username, and password confirmation."
+        operation_description="Registers a new user with email, optional full name, and password confirmation."
     )
     def post(self, request):
         try:
@@ -143,15 +143,22 @@ class RegisterView(APIView):
                 message="Registration successful",
                 data={
                     "email": user.email,
-                    "username": user.username
+                    "full_name": user.full_name
                 },
                 status_code=status.HTTP_201_CREATED
             )
 
-        except DRFValidationError as ve:
+        # except DRFValidationError as ve:
+        #     return error_response(
+        #         message="Registration failed",
+        #         errors=ve.detail if hasattr(ve, "detail") else str(ve),
+        #         status_code=status.HTTP_400_BAD_REQUEST
+            # )
+            
+        except ValueError as ve:
             return error_response(
                 message="Registration failed",
-                errors=ve.detail if hasattr(ve, "detail") else str(ve),
+                errors={"detail": str(ve)},
                 status_code=status.HTTP_400_BAD_REQUEST
             )
 
@@ -187,7 +194,7 @@ class LoginView(APIView):
                     "refresh": tokens["refresh"],
                     "access": tokens["access"],
                     "email": user.email,
-                    "username": user.username,
+                    "full_name": user.full_name,
                 }
             )
 
@@ -548,7 +555,7 @@ class LogActionView(APIView):
 #         data = request.data
 #         user.first_name = data.get("first_name", user.first_name)
 #         user.last_name = data.get("last_name", user.last_name)
-#         user.username = data.get("username", user.username)
+#         user.full_name = data.get("full_name", user.full_name)
 #         new_password = data.get("password")
 #         if new_password:
 #             try:
