@@ -1133,8 +1133,8 @@ class UpdateBreakPlanView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         except Exception as e:
-            traceback.print_exc()  # Log to console
-            logger.error(f"BreakPlan update error: {str(e)}")  # Optional: log error
+            traceback.print_exc()
+            logger.error(f"BreakPlan update error: {str(e)}")
 
             return Response({
                 "message": "An unexpected error occurred.",
@@ -1580,7 +1580,6 @@ class FirstLoginSetupView(APIView):
                         status_code=status.HTTP_400_BAD_REQUEST,
                     )
 
-                # --- Final Response ---
                 return success_response(
                     message="First login setup completed successfully",
                     data={
