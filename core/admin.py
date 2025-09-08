@@ -13,6 +13,7 @@ from .models import (
     UserNotificationPreference,
     BreakPlan,
     LeaveBalance,
+    BreakPreferences,
 )
 
 # Custom Admin Configuration for User Model
@@ -188,6 +189,36 @@ class LeaveBalanceAdmin(admin.ModelAdmin):
     list_display = ("anual_leave_balance", "already_used_balance", "anual_leave_refresh_date", "updated_at")
     readonly_fields = ("updated_at",)
     search_fields = ("anual_leave_balance",)
+
+@admin.register(BreakPreferences)
+class BreakPreferencesAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "preference",
+        "weather_based_recommendation",
+        "to_be_confirmed",
+    )
+    list_filter = (
+        "preference",
+        "weather_based_recommendation",
+        "to_be_confirmed",
+    )
+    search_fields = (
+        "user__full_name",
+        "user__email",
+    )
+    ordering = ("user",)
+    autocomplete_fields = ("user",)
+    list_editable = ("weather_based_recommendation", "to_be_confirmed")
+    fieldsets = (
+        (None, {
+            "fields": ("user", "preference"),
+        }),
+        ("Additional Options", {
+            "fields": ("weather_based_recommendation", "to_be_confirmed"),
+            "classes": ("collapse",),
+        }),
+    )
 
 # Register all models with custom configurations
 admin.site.register(User, UserAdmin)

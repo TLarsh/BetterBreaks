@@ -18,6 +18,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from datetime import timedelta, date, datetime
 from dateutil import parser as date_parser
 from .validators import validate_password
+from .models import LeaveBalance, BreakPreferences, OptimizationGoal, UserNotificationPreference, WorkingPattern, GamificationData
 from .serializers import (
     RegisterSerializer,
     LoginSerializer,
@@ -40,6 +41,8 @@ from .serializers import (
     BreakPlanListSerializer,
     BreakPlanUpdateSerializer,
     LeaveBalanceSerializer, BreakPreferencesSerializer, BreakPlanSerializer,
+    #______firstLoginSetupSerializer____
+    FirstLoginSetupSerializer,
     # _____settingsSerializer___
     UserSettingsSerializer,
     # _____notificationSerializer___
@@ -67,12 +70,10 @@ from .models import (
     OnboardingData,
     PublicHoliday,
     GamificationData,
+    LeaveBalance, BreakPreferences, OptimizationGoal, UserNotificationPreference, WorkingPattern, GamificationData,
     WellbeingQuestion,
     
     BreakPlan,
-    UserNotificationPreference,
-    WorkingPattern,
-    OptimizationGoal,
     Mood,
 
     Event, Booking
@@ -1469,66 +1470,293 @@ class MoodHistoryView(APIView):
 
 
 
+@first_login_setup_docs
 class FirstLoginSetupView(APIView):
     """
     Create LeaveBalance, Preferences, and optional BreakPlan for user
     if they don't already exist.
     """
 
+    @swagger_auto_schema(
+        operation_summary="First Login Setup",
+        operation_description="Initial setup for LeaveBalance, Preferences, and optional BreakPlan.",
+        request_body=FirstLoginSetupSerializer,
+        responses={
+            status.HTTP_201_CREATED: openapi.Response(
+                description="Setup completed successfully"
+            ),
+            status.HTTP_400_BAD_REQUEST: "Validation error",
+            status.HTTP_409_CONFLICT: "Duplicate or unique constraint violation",
+            status.HTTP_500_INTERNAL_SERVER_ERROR: "Server error"
+        }
+    )
+
     def post(self, request, *args, **kwargs):
-        user = request.user
-        payload = request.data
-        created_items = {}
+        try:
+            serializer = FirstLoginSetupSerializer(
+                data=request.data, context={"request": request}
+            )
 
-        # LEAVE BALANCE
-        if not hasattr(user, 'leave_balance'):
-            lb_data = payload.get('LeaveBalance', {})
-            lb_serializer = LeaveBalanceSerializer(data={
-                'annual_leave_balance': lb_data.get('annual_leave_balance', 60),
-                'annual_leave_refresh_date': lb_data.get('annual_leave_refresh_date', date.today()),
-                'already_used_balance': lb_data.get('already_used_balance', 0),
-            })
-            lb_serializer.is_valid(raise_exception=True)
-            leave_balance = lb_serializer.save(user=user)
-            created_items['LeaveBalance'] = lb_serializer.data
-        else:
-            created_items['LeaveBalance'] = "Already exists"
+            if serializer.is_valid():
+                user = request.user
+                data = serializer.validated_data
 
-        # PREFERENCES
-        if not user.break_preferences.exists():
-            pref_data = payload.get('Preferences', {})
-            pref_serializer = BreakPreferencesSerializer(data={
-                'preference': pref_data.get('preference', 'long_weekends'),
-                'weather_based_recommendation': pref_data.get('weather_based_recommendation', False),
-                'to_be_confirmed': pref_data.get('to_be_confirmed', False),
-            })
-            pref_serializer.is_valid(raise_exception=True)
-            preferences = pref_serializer.save(user=user)
-            created_items['Preferences'] = pref_serializer.data
-        else:
-            created_items['Preferences'] = "Already exists"
+                # --- Handle LeaveBalance ---
+                lb_data = data.get("LeaveBalance")
+                existing_leave_balance = LeaveBalance.objects.filter(user=user).first()
 
-        # BREAK PLAN
-        break_plan_data = payload.get('BreakPlan', {})
-        if break_plan_data.get('startDate') and break_plan_data.get('endDate'):
-            bp_serializer = BreakPlanSerializer(data={
-                'startDate': break_plan_data['startDate'],
-                'endDate': break_plan_data['endDate'],
-                'description': break_plan_data.get('description', ''),
-                'status': break_plan_data.get('status', 'planned'),
-                'type': break_plan_data.get('type', 'vacation'),
-            })
-            bp_serializer.is_valid(raise_exception=True)
-            break_plan = bp_serializer.save(user=user, leave_balance=user.leave_balance)
-            created_items['BreakPlan'] = bp_serializer.data
-        else:
-            created_items['BreakPlan'] = "Not created - startDate & endDate required"
+                if existing_leave_balance:
+                    lb_serializer = LeaveBalanceSerializer(
+                        existing_leave_balance,
+                        data=lb_data,
+                        partial=True,
+                        context={"request": request},
+                    )
+                else:
+                    lb_serializer = LeaveBalanceSerializer(
+                        data=lb_data, context={"request": request}
+                    )
 
-        return success_response(
-            message="Setup complete",
-            data=created_items,
-            status_code=status.HTTP_201_CREATED
-        )
+                if lb_serializer.is_valid():
+                    leave_balance = lb_serializer.save(user=user)
+                else:
+                    return error_response(
+                        message="LeaveBalance validation failed",
+                        errors=lb_serializer.errors,
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                # --- Handle BreakPreferences ---
+                pref_data = data.get("BreakPreferences")
+                existing_preferences = BreakPreferences.objects.filter(user=user).first()
+
+                if existing_preferences:
+                    pref_serializer = BreakPreferencesSerializer(
+                        existing_preferences,
+                        data=pref_data,
+                        partial=True,
+                        context={"request": request},
+                    )
+                else:
+                    pref_serializer = BreakPreferencesSerializer(
+                        data=pref_data, context={"request": request}
+                    )
+
+                if pref_serializer.is_valid():
+                    preferences = pref_serializer.save(user=user)
+                else:
+                    return error_response(
+                        message="BreakPreferences validation failed",
+                        errors=pref_serializer.errors,
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                # --- Handle BreakPlan ---
+                bp_data = data.get("BreakPlan")
+                existing_break_plan = BreakPlan.objects.filter(user=user).first()
+                
+                if existing_break_plan:
+                    # Update the existing plan
+                    bp_serializer = BreakPlanSerializer(
+                        existing_break_plan,
+                        data=bp_data,
+                        partial=True,
+                        context={"request": request},
+                    )
+                else:
+                    # Create a new one
+                    bp_serializer = BreakPlanSerializer(
+                        data=bp_data,
+                        context={"request": request},
+                    )
+                
+                if bp_serializer.is_valid():
+                    break_plan = bp_serializer.save(user=user, leave_balance=leave_balance)
+                else:
+                    return error_response(
+                        message="BreakPlan validation failed",
+                        errors=bp_serializer.errors,
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                # --- Final Response ---
+                return success_response(
+                    message="First login setup completed successfully",
+                    data={
+                        "LeaveBalance": LeaveBalanceSerializer(
+                            leave_balance, context={"request": request}
+                        ).data,
+                        "BreakPreferences": BreakPreferencesSerializer(
+                            preferences, context={"request": request}
+                        ).data,
+                        "BreakPlan": BreakPlanSerializer(
+                            break_plan, context={"request": request}
+                        ).data,
+                    },
+                )
+
+            return error_response(
+                message="Invalid data",
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        except Exception as e:
+            return error_response(
+                message=f"An unexpected error occurred: {str(e)}",
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    # def post(self, request):
+    #     user = request.user
+    #     serializer = FirstLoginSetupSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     data = serializer.validated_data
+
+    #     # Check if user already has records and update them instead of creating new ones
+    #     existing_leave_balance = LeaveBalance.objects.filter(user=user).first()
+    #     existing_preferences = BreakPreferences.objects.filter(user=user).first()
+
+    #     try:
+    #         with transaction.atomic():
+    #             # 1. Leave Balance - update if exists, create if not
+    #             lb_data = data.get("LeaveBalance")
+    #             if existing_leave_balance:
+    #                 # Update existing leave balance
+    #                 lb_serializer = LeaveBalanceSerializer(existing_leave_balance, data=lb_data, partial=True)
+    #                 lb_serializer.is_valid(raise_exception=True)
+    #                 leave_balance = lb_serializer.save()
+    #             else:
+    #                 # Create new leave balance
+    #                 lb_serializer = LeaveBalanceSerializer(data=lb_data)
+    #                 lb_serializer.is_valid(raise_exception=True)
+    #                 leave_balance = lb_serializer.save(user=user)
+
+    #             # 2. Preferences - update if exists, create if not
+    #             pref_data = data.get("Preferences")
+    #             if existing_preferences:
+    #                 # Update existing preferences
+    #                 pref_serializer = BreakPreferencesSerializer(existing_preferences, data=pref_data, partial=True)
+    #                 pref_serializer.is_valid(raise_exception=True)
+    #                 preferences = pref_serializer.save()
+    #             else:
+    #                 # Create new preferences
+    #                 pref_serializer = BreakPreferencesSerializer(data=pref_data)
+    #                 pref_serializer.is_valid(raise_exception=True)
+    #                 preferences = pref_serializer.save(user=user)
+
+    #             # 3. Break Plan (optional)
+    #             break_plan = None
+    #             if data.get("BreakPlan"):
+    #                 bp_serializer = BreakPlanSerializer(data=data.get("BreakPlan"))
+    #                 bp_serializer.is_valid(raise_exception=True)
+    #                 break_plan = bp_serializer.save(user=user, leave_balance=leave_balance)
+
+    #         response_status = status.HTTP_200_OK if (existing_leave_balance or existing_preferences) else status.HTTP_201_CREATED
+    #         action_message = "updated" if (existing_leave_balance or existing_preferences) else "created"
+            
+    #         return success_response(
+    #             message=f"First login setup {action_message} successfully",
+    #             data={
+    #                 "leave_balance": lb_serializer.data,
+    #                 "preferences": pref_serializer.data,
+    #                 "break_plan": BreakPlanSerializer(break_plan).data if break_plan else None
+    #             },
+    #             status_code=response_status
+    #         )
+
+    #     except IntegrityError as e:
+    #         # This should rarely happen now since we're handling existing records
+    #         error_msg = str(e)
+    #         if "core_leavebalance" in error_msg:
+    #             return error_response("Error updating leave balance. Please try again.", status_code=status.HTTP_400_BAD_REQUEST)
+    #         elif "core_breakpreferences" in error_msg:
+    #             return error_response("Error updating break preferences. Please try again.", status_code=status.HTTP_400_BAD_REQUEST)
+    #         else:
+    #             return error_response(f"Error during onboarding setup: {error_msg}", status_code=status.HTTP_400_BAD_REQUEST)
+    #     except DRFValidationError as e:
+    #         # Handle validation errors from serializers
+    #         return error_response(f"Validation error: {str(e)}", status_code=status.HTTP_400_BAD_REQUEST)
+    #     except DjangoValidationError as e:
+    #         # Handle Django validation errors
+    #         return error_response(f"Validation error: {str(e)}", status_code=status.HTTP_400_BAD_REQUEST)
+    #     except Exception as e:
+    #         return error_response(f"An unexpected error occurred: {str(e)}", status_code=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+
+
+    # def post(self, request, *args, **kwargs):
+    #     user = request.user
+    #     payload = request.data
+    #     created_items = {}
+
+    #     try:
+    #         # === LEAVE BALANCE ===
+    #         if not hasattr(user, 'leave_balance'):
+    #             lb_data = payload.get('LeaveBalance', {})
+    #             lb_serializer = LeaveBalanceSerializer(data=lb_data)
+    #             lb_serializer.is_valid(raise_exception=True)
+    #             leave_balance = lb_serializer.save(user=user)
+    #             created_items['LeaveBalance'] = lb_serializer.data
+    #         else:
+    #             created_items['LeaveBalance'] = "Already exists"
+
+    #         # === PREFERENCES ===
+    #         if not user.break_preferences.exists():
+    #             pref_data = payload.get('Preferences', {})
+    #             pref_serializer = BreakPreferencesSerializer(data=pref_data)
+    #             pref_serializer.is_valid(raise_exception=True)
+    #             preferences = pref_serializer.save(user=user)
+    #             created_items['Preferences'] = pref_serializer.data
+    #         else:
+    #             created_items['Preferences'] = "Already exists"
+
+    #         # === BREAK PLAN ===
+    #         break_plan_data = payload.get('BreakPlan', {})
+    #         if break_plan_data.get('startDate') and break_plan_data.get('endDate'):
+    #             bp_serializer = BreakPlanSerializer(data=break_plan_data)
+    #             bp_serializer.is_valid(raise_exception=True)
+    #             break_plan = bp_serializer.save(
+    #                 user=user,
+    #                 leave_balance=user.leave_balance
+    #             )
+    #             created_items['BreakPlan'] = bp_serializer.data
+    #         else:
+    #             created_items['BreakPlan'] = "Not created - startDate & endDate required"
+
+    #         return success_response(
+    #             message="Setup complete",
+    #             data=created_items,
+    #             status_code=status.HTTP_201_CREATED
+    #         )
+
+    #     except IntegrityError as e:
+    #         return error_response(
+    #             message="Database integrity error",
+    #             errors=str(e),
+    #             status_code=status.HTTP_409_CONFLICT
+    #         )
+    #     except ValidationError as e:
+    #         return error_response(
+    #             message="Validation failed",
+    #             errors=e.detail,
+    #             status_code=status.HTTP_400_BAD_REQUEST
+    #         )
+    #     except Exception as e:
+    #         return error_response(
+    #             message="Unexpected server error",
+    #             errors=str(e),
+    #             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            # )
+
+
+
 
 
 class WeatherForecastView(APIView):
