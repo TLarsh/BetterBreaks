@@ -43,6 +43,7 @@ from .serializers import (
     LeaveBalanceSerializer, BreakPreferencesSerializer, BreakPlanSerializer,
     #______firstLoginSetupSerializer____
     FirstLoginSetupSerializer,
+    FirstLoginSetupDataSerializer,
     # _____settingsSerializer___
     UserSettingsSerializer,
     # _____notificationSerializer___
@@ -1755,6 +1756,182 @@ class FirstLoginSetupView(APIView):
     #             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             # )
 
+class FirstLoginSetupUpdateView(APIView):
+    """
+    Update LeaveBalance, BreakPreferences, and/or BreakPlan for the logged-in user.
+    All fields are optional — only the provided ones will be updated.
+    """
+
+    @swagger_auto_schema(
+        operation_summary="Update First Login Setup Data",
+        operation_description="Update LeaveBalance, BreakPreferences, and/or BreakPlan. "
+                              "Each field is optional — only the provided ones will be updated.",
+        request_body=FirstLoginSetupDataSerializer,
+        responses={200: FirstLoginSetupDataSerializer}
+    )
+    def patch(self, request, *args, **kwargs):
+        user = request.user
+        serializer = FirstLoginSetupDataSerializer(data=request.data, context={"request": request})
+
+        if not serializer.is_valid():
+            return error_response(
+                message="Invalid data",
+                errors=serializer.errors,
+                status_code=status.HTTP_400_BAD_REQUEST,
+            )
+
+        data = serializer.validated_data
+        updated = {}
+
+        # --- Update LeaveBalance if provided ---
+        lb_data = data.get("LeaveBalance")
+        if lb_data is not None:
+            leave_balance = LeaveBalance.objects.filter(user=user).first()
+            if leave_balance:
+                lb_serializer = LeaveBalanceSerializer(
+                    leave_balance, data=lb_data, partial=True, context={"request": request}
+                )
+                if lb_serializer.is_valid(raise_exception=True):
+                    leave_balance = lb_serializer.save()
+                    updated["LeaveBalance"] = lb_serializer.data
+            else:
+                lb_serializer = LeaveBalanceSerializer(
+                    data=lb_data, context={"request": request}
+                )
+                if lb_serializer.is_valid(raise_exception=True):
+                    leave_balance = lb_serializer.save(user=user)
+                    updated["LeaveBalance"] = lb_serializer.data
+
+        # --- Update BreakPreferences if provided ---
+        pref_data = data.get("BreakPreferences")
+        if pref_data is not None:
+            preferences = BreakPreferences.objects.filter(user=user).first()
+            if preferences:
+                pref_serializer = BreakPreferencesSerializer(
+                    preferences, data=pref_data, partial=True, context={"request": request}
+                )
+                if pref_serializer.is_valid(raise_exception=True):
+                    preferences = pref_serializer.save()
+                    updated["BreakPreferences"] = pref_serializer.data
+            else:
+                pref_serializer = BreakPreferencesSerializer(
+                    data=pref_data, context={"request": request}
+                )
+                if pref_serializer.is_valid(raise_exception=True):
+                    preferences = pref_serializer.save(user=user)
+                    updated["BreakPreferences"] = pref_serializer.data
+
+        # --- Update BreakPlan if provided ---
+        bp_data = data.get("BreakPlan")
+        if bp_data is not None:
+            break_plan = BreakPlan.objects.filter(user=user).first()
+            if break_plan:
+                bp_serializer = BreakPlanSerializer(
+                    break_plan, data=bp_data, partial=True, context={"request": request}
+                )
+                if bp_serializer.is_valid(raise_exception=True):
+                    break_plan = bp_serializer.save()
+                    updated["BreakPlan"] = bp_serializer.data
+            else:
+                bp_serializer = BreakPlanSerializer(
+                    data=bp_data, context={"request": request}
+                )
+                if bp_serializer.is_valid(raise_exception=True):
+                    break_plan = bp_serializer.save(user=user, leave_balance=user.leave_balance)
+                    updated["BreakPlan"] = bp_serializer.data
+
+        return success_response(
+            message="First login setup data updated successfully",
+            data=updated,
+        )
+
+
+        # --- Update BreakPreferences if provided ---
+        pref_data = data.get("BreakPreferences")
+        if pref_data is not None:
+            preferences = BreakPreferences.objects.filter(user=user).first()
+            if preferences:
+                pref_serializer = BreakPreferencesSerializer(
+                    preferences, data=pref_data, partial=True, context={"request": request}
+                )
+                if pref_serializer.is_valid(raise_exception=True):
+                    preferences = pref_serializer.save()
+                    updated["BreakPreferences"] = pref_serializer.data
+            else:
+                pref_serializer = BreakPreferencesSerializer(
+                    data=pref_data, context={"request": request}
+                )
+                if pref_serializer.is_valid(raise_exception=True):
+                    preferences = pref_serializer.save(user=user)
+                    updated["BreakPreferences"] = pref_serializer.data
+
+
+class FirstLoginSetupDataView(APIView):
+    """
+    Retrieve LeaveBalance, BreakPreferences, and BreakPlan for the logged-in user.
+    """
+
+    @swagger_auto_schema(
+        operation_summary="Retrieve First Login Setup Data",
+        operation_description="Fetch the user's LeaveBalance, BreakPreferences, and BreakPlan.",
+        responses={200: FirstLoginSetupDataSerializer}
+    )
+    def get(self, request, *args, **kwargs):
+        user = request.user
+
+        leave_balance = LeaveBalance.objects.filter(user=user).first()
+        preferences = BreakPreferences.objects.filter(user=user).first()
+        break_plan = BreakPlan.objects.filter(user=user).first()
+
+        if not leave_balance or not preferences:
+            return error_response(
+                message="Setup data not found. Please complete first login setup.",
+                status_code=status.HTTP_404_NOT_FOUND,
+            )
+
+        data = {
+            "LeaveBalance": LeaveBalanceSerializer(
+                leave_balance, context={"request": request}
+            ).data if leave_balance else None,
+            "BreakPreferences": BreakPreferencesSerializer(
+                preferences, context={"request": request}
+            ).data if preferences else None,
+            "BreakPlan": BreakPlanSerializer(
+                break_plan, context={"request": request}
+            ).data if break_plan else None,
+        }
+
+        return success_response(
+            message="First login setup data retrieved successfully",
+            data=data,
+        )
+
+
+
+
+        # --- Update BreakPlan if provided ---
+        bp_data = data.get("BreakPlan")
+        if bp_data is not None:
+            break_plan = BreakPlan.objects.filter(user=user).first()
+            if break_plan:
+                bp_serializer = BreakPlanSerializer(
+                    break_plan, data=bp_data, partial=True, context={"request": request}
+                )
+                if bp_serializer.is_valid(raise_exception=True):
+                    break_plan = bp_serializer.save()
+                    updated["BreakPlan"] = bp_serializer.data
+            else:
+                bp_serializer = BreakPlanSerializer(
+                    data=bp_data, context={"request": request}
+                )
+                if bp_serializer.is_valid(raise_exception=True):
+                    break_plan = bp_serializer.save(user=user, leave_balance=user.leave_balance)
+                    updated["BreakPlan"] = bp_serializer.data
+
+        return success_response(
+            message="First login setup data updated successfully",
+            data=updated,
+        )
 
 
 

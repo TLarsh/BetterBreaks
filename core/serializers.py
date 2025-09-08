@@ -454,6 +454,12 @@ class FirstLoginSetupSerializer(serializers.Serializer):
                 })
 
         return attrs
+    
+# GET and PUT action
+class FirstLoginSetupDataSerializer(serializers.Serializer):
+    LeaveBalance = LeaveBalanceSerializer()
+    BreakPreferences = BreakPreferencesSerializer()
+    BreakPlan = BreakPlanSerializer()
 
 
 

@@ -35,6 +35,8 @@ from .views import (
     NotificationPreferenceView,
     ScheduleView,
     FirstLoginSetupView,
+    FirstLoginSetupUpdateView,
+    FirstLoginSetupDataView,
     MoodCheckInView,
     MoodHistoryView,
     WeatherForecastView,
@@ -122,6 +124,8 @@ urlpatterns = [
     path('api/user/notification-preferences', NotificationPreferenceView.as_view()),
     path("api/schedule", ScheduleView.as_view(), name="schedule"),
     path("api/onboarding/set/", FirstLoginSetupView.as_view(), name="onboarding"),
+    path("api/onboarding/setup-update/", FirstLoginSetupUpdateView.as_view(), name="first-login-setup-update"),
+    path("api/onboarding/setup-data/", FirstLoginSetupDataView.as_view(), name="first-login-setup-data"),
 
     path("api/weather/forecast/", WeatherForecastView.as_view(), name="weather-forecast"),
 
