@@ -18,7 +18,9 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from datetime import timedelta, date, datetime
 from dateutil import parser as date_parser
 from .validators import validate_password
-from .models import LeaveBalance, BreakPreferences, OptimizationGoal, UserNotificationPreference, WorkingPattern, GamificationData
+from .models import (LeaveBalance, BreakPreferences, OptimizationGoal, UserNotificationPreference, WorkingPattern, 
+# GamificationData
+)
 from .serializers import (
     RegisterSerializer,
     LoginSerializer,
@@ -29,13 +31,15 @@ from .serializers import (
     UserSerializer,
     DateEntrySerializer,
     BlackoutDateSerializer,
-    WellbeingScoreSerializer,
-    UpdateSettingsSerializer,
+    BlackOutDateSerializer,
+    SpecialDateSerializer,
+    # UpdateSettingsSerializer,
     ActionLogSerializer,
-    OnboardingDataSerializer,
-    PublicHolidaySerializer,
-    WellbeingQuestionSerializer,
-    GamificationDataSerializer,
+    # PublicHolidaySerializer,
+    # OnboardingDataSerializer,
+    # WellbeingScoreSerializer,
+    # WellbeingQuestionSerializer,
+    # GamificationDataSerializer,
     # _____BreakSerializer_______
     BreakPlanSerializer,
     BreakPlanListSerializer,
@@ -50,7 +54,6 @@ from .serializers import (
     NotificationPreferenceSerializer,
     # _____Schedule___
     WorkingPatternSerializer,
-    BlackOutDateSerializer,
     OptimizationGoalSerializer,
     # _____Mood___
     MoodCheckInSerializer, MoodHistorySerializer,
@@ -64,15 +67,17 @@ from .models import (
     LastLogin,
     UserSettings,
     DateEntry,
-    BlackoutDate,
-    WellbeingScore,
     ActionData,
     Client,
-    OnboardingData,
-    PublicHoliday,
-    GamificationData,
-    LeaveBalance, BreakPreferences, OptimizationGoal, UserNotificationPreference, WorkingPattern, GamificationData,
-    WellbeingQuestion,
+    LeaveBalance, BreakPreferences, OptimizationGoal, UserNotificationPreference, WorkingPattern, 
+    BlackoutDate,
+    SpecialDate,
+    # GamificationData,
+    # PublicHoliday,
+    # OnboardingData,
+    # GamificationData,
+    # WellbeingScore,
+    # WellbeingQuestion,
     
     BreakPlan,
     Mood,
@@ -98,8 +103,17 @@ from .swagger_api_fe import (
 )
 from.helper import validate_and_create_user
 from .utils import (
-    create_calendar_event, fetch_public_holidays,calculate_smart_planning_score,award_badges,generate_holiday_suggestions,fetch_weather_data,adjust_score_based_on_weather, success_response, error_response, fetch_6day_weather_forecast_openweathermap,
+    create_calendar_event, 
+    fetch_public_holidays,
+    # calculate_smart_planning_score,
+    # award_badges,
+    # generate_holiday_suggestions,
+    # fetch_weather_data,
+    adjust_score_based_on_weather, 
+    success_response, error_response, 
+    fetch_6day_weather_forecast_openweathermap,
 )
+
 from .payments import PaystackGateway
 
 from drf_yasg.utils import swagger_auto_schema
@@ -368,72 +382,75 @@ class BookEventView(APIView):
         except DateEntry.DoesNotExist:
             return Response({"error": "Event not found"}, status=status.HTTP_404_NOT_FOUND)
         
-class LogoutView(APIView):
-    """Handle user logout by blacklisting the refresh token."""
-    permission_classes = [AllowAny]
+# class LogoutView(APIView):
+#     """Handle user logout by blacklisting the refresh token."""
+#     permission_classes = [AllowAny]
 
-    @swagger_auto_schema(request_body=LogoutSerializer)
-    def post(self, request):
-        refresh_token = request.data.get("refresh")
-        if not refresh_token:
-            return Response(
-                {"errors": ["Refresh token is required"]},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+#     @swagger_auto_schema(request_body=LogoutSerializer)
+#     def post(self, request):
+#         refresh_token = request.data.get("refresh")
+#         if not refresh_token:
+#             return Response(
+#                 {"errors": ["Refresh token is required"]},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
 
-        try:
+#         try:
         
-            token_obj = RefreshToken(refresh_token)
+#             token_obj = RefreshToken(refresh_token)
 
             
-            jti = token_obj["jti"]
-            LastLogin.objects.filter(token=jti).update(token_valid=False)
+#             jti = token_obj["jti"]
+#             LastLogin.objects.filter(token=jti).update(token_valid=False)
 
             
-            token_obj.blacklist()
+#             token_obj.blacklist()
 
-            return Response(status=status.HTTP_200_OK)
+#             return Response(status=status.HTTP_200_OK)
 
-        except TokenError as e:
-            return Response(
-                {"errors": [str(e)]},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except Exception as e:
-            return Response(
-                {"errors": ["Server error"]},
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
+#         except TokenError as e:
+#             return Response(
+#                 {"errors": [str(e)]},
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+#         except Exception as e:
+#             return Response(
+#                 {"errors": ["Server error"]},
+#                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
+#             )
         
-class FetchPublicHolidaysView(APIView):
-    def get(self, request):
-        user = request.user
-        if not user.home_location_timezone:
-            return Response({"error": "User location not set"}, status=status.HTTP_400_BAD_REQUEST)
+# class FetchPublicHolidaysView(APIView):
+#     def get(self, request):
+#         user = request.user
+#         if not user.home_location_timezone:
+#             return Response({"error": "User location not set"}, status=status.HTTP_400_BAD_REQUEST)
 
-        country_code = user.home_location_timezone.split("/")[0]  # Extract country code
-        year = timezone.now().year
-        holidays_data = fetch_public_holidays(country_code, year)
+#         country_code = user.home_location_timezone.split("/")[0]  # Extract country code
+#         year = timezone.now().year
+#         holidays_data = fetch_public_holidays(country_code, year)
 
-        for holiday in holidays_data:
-            PublicHoliday.objects.update_or_create(
-                user=user,
-                date=holiday["date"],
-                defaults={"name": holiday["name"], "country_code": country_code}
-            )
+#         for holiday in holidays_data:
+#             PublicHoliday.objects.update_or_create(
+#                 user=user,
+#                 date=holiday["date"],
+#                 defaults={"name": holiday["name"], "country_code": country_code}
+#             )
 
-        return Response({"success": True}, status=status.HTTP_200_OK)
+#         return Response({"success": True}, status=status.HTTP_200_OK)
     
 
-class ListPublicHolidaysView(APIView):
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+# class ListPublicHolidaysView(APIView):
+#     def get(self, request):
+#         if not request.user.is_authenticated:
+#             return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        holidays = PublicHoliday.objects.filter(user=request.user)
-        serializer = PublicHolidaySerializer(holidays, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+#         holidays = PublicHoliday.objects.filter(user=request.user)
+#         serializer = PublicHolidaySerializer(holidays, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+############### SPECIAL DATE VIEWS #####################
+######################################################## 
 class BlackoutDatesView(APIView):
     """Retrieve authenticated user's blackout dates."""
     def get(self, request):
@@ -456,93 +473,191 @@ class ProfileView(APIView):
         serializer = UserSerializer(request.user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class UpdateWellbeingView(APIView):
-    """Log user's wellbeing score."""
-    @swagger_auto_schema(request_body=WellbeingScoreSerializer)
-    def post(self, request):
-        if not request.user.is_authenticated:
-            return Response(
-                {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-        score = request.data.get("score")
-        if not score:
-            return Response(
-                {"errors": ["Score is required"]}, status=status.HTTP_400_BAD_REQUEST
-            )
-        try:
-            score = int(score)
-            if not 0 <= score <= 10:
-                raise ValueError
-        except (ValueError, TypeError):
-            return Response(
-                {"errors": ["Score must be an integer between 0-10"]}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        WellbeingScore.objects.create(
-            user=request.user,
-            score=score,
-            score_date=timezone.now()
+
+class SpecialDateListCreateView(APIView):
+    """
+    List all special dates or create a new one.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(
+        operation_summary="List Special Dates",
+        responses={200: SpecialDateSerializer(many=True)}
+    )
+    def get(self, request, *args, **kwargs):
+        special_dates = SpecialDate.objects.filter(user=request.user)
+        serializer = SpecialDateSerializer(special_dates, many=True)
+        return success_response(
+            message="Special dates retrieved successfully",
+            data=serializer.data,
         )
-        return Response(status=status.HTTP_200_OK)
 
-class LogActionView(APIView):
-    """Log application actions (authenticated or unauthenticated)."""
-    permission_classes = [AllowAny]  # Allow both authenticated and unauthenticated access
-
-    @swagger_auto_schema(request_body=ActionLogSerializer)
-    def post(self, request):
-        serializer = ActionLogSerializer(data=request.data)
+    @swagger_auto_schema(
+        operation_summary="Create Special Date",
+        request_body=SpecialDateSerializer,
+        responses={201: SpecialDateSerializer}
+    )
+    def post(self, request, *args, **kwargs):
+        serializer = SpecialDateSerializer(data=request.data)
         if serializer.is_valid():
-            data = serializer.validated_data
-            user = None
-            token = data.get("token")
-            if token:
-                try:
-                    # Ensure token is a string before converting to UUID
-                    token_str = str(token)
-                    token_uuid = uuid.UUID(token_str)
-                    login_entry = LastLogin.objects.get(
-                        token=token_uuid, token_valid=True
-                    )
-                    user = login_entry.user
-                except (ValueError, LastLogin.DoesNotExist):
-                    pass
-
-            # Create the action log entry
-            ActionData.objects.create(
-                user=user,
-                action_date=timezone.now(),
-                ip_address=request.META.get("REMOTE_ADDR", ""),
-                application_area_name=data["application_area_name"],
-                action_description=data["action_description"],
-                action_duration_seconds=data["action_duration_seconds"]
+            special_date = serializer.save(user=request.user)
+            return success_response(
+                message="Special date created successfully",
+                data=SpecialDateSerializer(special_date).data,
+                status_code=status.HTTP_201_CREATED,
             )
+        return error_response(
+            message="Validation error",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
 
-            # If the user is authenticated, update gamification data
-            if user:
-                gamification_data, created = GamificationData.objects.get_or_create(user=user)
 
-                # Award points for logging an action
-                gamification_data.points += 10  # Example: 10 points per logged action
-                gamification_data.save()
+class SpecialDateDetailView(APIView):
+    """
+    Retrieve, update or delete a special date.
+    """
 
-                # Update streak if the action is related to taking breaks
-                if "break" in data["application_area_name"].lower():
-                    last_break = DateEntry.objects.filter(
-                        user=user, start_date__gte=timezone.now() - timezone.timedelta(days=1)
-                    ).order_by("-start_date").first()
+    permission_classes = [IsAuthenticated]
 
-                    if last_break:
-                        gamification_data.streak_days += 1
-                    else:
-                        gamification_data.streak_days = 1  # Reset streak if no recent breaks
-                    gamification_data.save()
+    def get_object(self, pk, user):
+        try:
+            return SpecialDate.objects.get(pk=pk, user=user)
+        except SpecialDate.DoesNotExist:
+            return None
 
-                # Award badges based on updated gamification data
-                award_badges(user)
+    @swagger_auto_schema(
+        operation_summary="Retrieve Special Date",
+        responses={200: SpecialDateSerializer}
+    )
+    def get(self, request, pk, *args, **kwargs):
+        special_date = self.get_object(pk, request.user)
+        if not special_date:
+            return error_response("Special date not found", status.HTTP_404_NOT_FOUND)
 
-            return Response(status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer = SpecialDateSerializer(special_date)
+        return success_response("Special date retrieved successfully", serializer.data)
+
+    @swagger_auto_schema(
+        operation_summary="Update Special Date",
+        request_body=SpecialDateSerializer,
+        responses={200: SpecialDateSerializer}
+    )
+    def patch(self, request, pk, *args, **kwargs):
+        special_date = self.get_object(pk, request.user)
+        if not special_date:
+            return error_response("Special date not found", status.HTTP_404_NOT_FOUND)
+
+        serializer = SpecialDateSerializer(
+            special_date, data=request.data, partial=True
+        )
+        if serializer.is_valid():
+            special_date = serializer.save()
+            return success_response(
+                "Special date updated successfully", serializer.data
+            )
+        return error_response("Validation error", serializer.errors, 400)
+
+    @swagger_auto_schema(
+        operation_summary="Delete Special Date",
+        responses={204: "Deleted successfully"}
+    )
+    def delete(self, request, pk, *args, **kwargs):
+        special_date = self.get_object(pk, request.user)
+        if not special_date:
+            return error_response("Special date not found", status.HTTP_404_NOT_FOUND)
+
+        special_date.delete()
+        return success_response("Special date deleted successfully", None, 204)
+
+# class UpdateWellbeingView(APIView):
+#     """Log user's wellbeing score."""
+#     @swagger_auto_schema(request_body=WellbeingScoreSerializer)
+#     def post(self, request):
+#         if not request.user.is_authenticated:
+#             return Response(
+#                 {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
+#             )
+#         score = request.data.get("score")
+#         if not score:
+#             return Response(
+#                 {"errors": ["Score is required"]}, status=status.HTTP_400_BAD_REQUEST
+#             )
+#         try:
+#             score = int(score)
+#             if not 0 <= score <= 10:
+#                 raise ValueError
+#         except (ValueError, TypeError):
+#             return Response(
+#                 {"errors": ["Score must be an integer between 0-10"]}, 
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+#         WellbeingScore.objects.create(
+#             user=request.user,
+#             score=score,
+#             score_date=timezone.now()
+#         )
+#         return Response(status=status.HTTP_200_OK)
+
+# class LogActionView(APIView):
+#     """Log application actions (authenticated or unauthenticated)."""
+#     permission_classes = [AllowAny]  # Allow both authenticated and unauthenticated access
+
+#     @swagger_auto_schema(request_body=ActionLogSerializer)
+#     def post(self, request):
+#         serializer = ActionLogSerializer(data=request.data)
+#         if serializer.is_valid():
+#             data = serializer.validated_data
+#             user = None
+#             token = data.get("token")
+#             if token:
+#                 try:
+#                     # Ensure token is a string before converting to UUID
+#                     token_str = str(token)
+#                     token_uuid = uuid.UUID(token_str)
+#                     login_entry = LastLogin.objects.get(
+#                         token=token_uuid, token_valid=True
+#                     )
+#                     user = login_entry.user
+#                 except (ValueError, LastLogin.DoesNotExist):
+#                     pass
+
+#             # Create the action log entry
+#             ActionData.objects.create(
+#                 user=user,
+#                 action_date=timezone.now(),
+#                 ip_address=request.META.get("REMOTE_ADDR", ""),
+#                 application_area_name=data["application_area_name"],
+#                 action_description=data["action_description"],
+#                 action_duration_seconds=data["action_duration_seconds"]
+#             )
+
+#             # If the user is authenticated, update gamification data
+#             if user:
+#                 gamification_data, created = GamificationData.objects.get_or_create(user=user)
+
+#                 # Award points for logging an action
+#                 gamification_data.points += 10  # Example: 10 points per logged action
+#                 gamification_data.save()
+
+#                 # Update streak if the action is related to taking breaks
+#                 if "break" in data["application_area_name"].lower():
+#                     last_break = DateEntry.objects.filter(
+#                         user=user, start_date__gte=timezone.now() - timezone.timedelta(days=1)
+#                     ).order_by("-start_date").first()
+
+#                     if last_break:
+#                         gamification_data.streak_days += 1
+#                     else:
+#                         gamification_data.streak_days = 1  # Reset streak if no recent breaks
+#                     gamification_data.save()
+
+#                 # Award badges based on updated gamification data
+#                 award_badges(user)
+
+#             return Response(status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # class UpdateProfileView(APIView):
 #     """Update user profile details."""
@@ -647,28 +762,28 @@ class UpdateProfileView(APIView):
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
 
-class UpdateSettingsView(APIView):
-    """Update user settings JSON."""
-    @swagger_auto_schema(request_body=UpdateSettingsSerializer)
-    def post(self, request):
-        if not request.user.is_authenticated:
-            return Response(
-                {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-        settings_json = request.data.get("settings_json")
-        if not settings_json:
-            return Response(
-                {"errors": ["Settings JSON is required"]}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        # Ensure a default value is provided for settings_json
-        user_settings, created = UserSettings.objects.get_or_create(
-            user=request.user,
-            defaults={"settings_json": {}},  # Default empty JSON object
-        )
-        user_settings.settings_json = settings_json
-        user_settings.save()
-        return Response(status=status.HTTP_200_OK)
+# class UpdateSettingsView(APIView):
+#     """Update user settings JSON."""
+#     @swagger_auto_schema(request_body=UpdateSettingsSerializer)
+#     def post(self, request):
+#         if not request.user.is_authenticated:
+#             return Response(
+#                 {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
+#             )
+#         settings_json = request.data.get("settings_json")
+#         if not settings_json:
+#             return Response(
+#                 {"errors": ["Settings JSON is required"]}, 
+#                 status=status.HTTP_400_BAD_REQUEST
+#             )
+#         # Ensure a default value is provided for settings_json
+#         user_settings, created = UserSettings.objects.get_or_create(
+#             user=request.user,
+#             defaults={"settings_json": {}},  # Default empty JSON object
+#         )
+#         user_settings.settings_json = settings_json
+#         user_settings.save()
+#         return Response(status=status.HTTP_200_OK)
 
 class GetSettingsView(APIView):
     """Retrieve user settings JSON."""
@@ -688,227 +803,227 @@ class GetSettingsView(APIView):
                 {"settings_json": None}, status=status.HTTP_200_OK
             )
         
-class GetOnboardingDataView(APIView):
-    """Retrieve user's onboarding data."""
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response(
-                {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-        try:
-            onboarding_data = OnboardingData.objects.get(user=request.user)
-            serializer = OnboardingDataSerializer(onboarding_data)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except OnboardingData.DoesNotExist:
-            return Response(
-                {"detail": "Onboarding data not found"}, status=status.HTTP_404_NOT_FOUND
-            )
+# class GetOnboardingDataView(APIView):
+#     """Retrieve user's onboarding data."""
+#     def get(self, request):
+#         if not request.user.is_authenticated:
+#             return Response(
+#                 {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
+#             )
+#         try:
+#             onboarding_data = OnboardingData.objects.get(user=request.user)
+#             serializer = OnboardingDataSerializer(onboarding_data)
+#             return Response(serializer.data, status=status.HTTP_200_OK)
+#         except OnboardingData.DoesNotExist:
+#             return Response(
+#                 {"detail": "Onboarding data not found"}, status=status.HTTP_404_NOT_FOUND
+#             )
 
 
-class UpdateOnboardingDataView(APIView):
-    """Update or create user's onboarding data."""
-    @swagger_auto_schema(request_body=OnboardingDataSerializer)
-    def post(self, request):
-        if not request.user.is_authenticated:
-            return Response(
-                {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-        survey_results = request.data.get("survey_results")
-        if not survey_results:
-            return Response(
-                {"errors": ["Survey results are required"]}, status=status.HTTP_400_BAD_REQUEST
-            )
-        # Update or create the onboarding data
-        onboarding_data, created = OnboardingData.objects.update_or_create(
-            user=request.user,
-            defaults={"survey_results": survey_results},
-        )
-        serializer = OnboardingDataSerializer(onboarding_data)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+# class UpdateOnboardingDataView(APIView):
+#     """Update or create user's onboarding data."""
+#     @swagger_auto_schema(request_body=OnboardingDataSerializer)
+#     def post(self, request):
+#         if not request.user.is_authenticated:
+#             return Response(
+#                 {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
+#             )
+#         survey_results = request.data.get("survey_results")
+#         if not survey_results:
+#             return Response(
+#                 {"errors": ["Survey results are required"]}, status=status.HTTP_400_BAD_REQUEST
+#             )
+#         # Update or create the onboarding data
+#         onboarding_data, created = OnboardingData.objects.update_or_create(
+#             user=request.user,
+#             defaults={"survey_results": survey_results},
+#         )
+#         serializer = OnboardingDataSerializer(onboarding_data)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
 
-class OptimizationScoreView(APIView):
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+# class OptimizationScoreView(APIView):
+#     def get(self, request):
+#         if not request.user.is_authenticated:
+#             return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        # Step 1: Calculate the average wellbeing score over the last 7 days
-        recent_scores = WellbeingScore.objects.filter(
-            user=request.user,
-            score_date__gte=timezone.now() - timedelta(days=7)
-        ).aggregate(avg_score=Avg("score"))
-        avg_wellbeing_score = recent_scores["avg_score"] or 0  # Default to 0 if no scores exist
+#         # Step 1: Calculate the average wellbeing score over the last 7 days
+#         recent_scores = WellbeingScore.objects.filter(
+#             user=request.user,
+#             score_date__gte=timezone.now() - timedelta(days=7)
+#         ).aggregate(avg_score=Avg("score"))
+#         avg_wellbeing_score = recent_scores["avg_score"] or 0  # Default to 0 if no scores exist
 
-        # Step 2: Count upcoming events in the next 30 days
-        upcoming_events_count = DateEntry.objects.filter(
-            user=request.user,
-            start_date__gte=timezone.now(),
-            start_date__lte=timezone.now() + timedelta(days=30)
-        ).count()
+#         # Step 2: Count upcoming events in the next 30 days
+#         upcoming_events_count = DateEntry.objects.filter(
+#             user=request.user,
+#             start_date__gte=timezone.now(),
+#             start_date__lte=timezone.now() + timedelta(days=30)
+#         ).count()
 
-        # Step 3: Check for blackout dates in the next 30 days
-        blackout_dates = BlackoutDate.objects.filter(
-            user=request.user,
-            start_date__gte=timezone.now(),
-            start_date__lte=timezone.now() + timedelta(days=30)
-        )
+#         # Step 3: Check for blackout dates in the next 30 days
+#         blackout_dates = BlackoutDate.objects.filter(
+#             user=request.user,
+#             start_date__gte=timezone.now(),
+#             start_date__lte=timezone.now() + timedelta(days=30)
+#         )
 
-        # Step 4: Fetch public holidays in the next 30 days
-        public_holidays = PublicHoliday.objects.filter(
-            user=request.user,
-            date__gte=timezone.now().date(),
-            date__lte=(timezone.now() + timedelta(days=30)).date()
-        )
+#         # Step 4: Fetch public holidays in the next 30 days
+#         public_holidays = PublicHoliday.objects.filter(
+#             user=request.user,
+#             date__gte=timezone.now().date(),
+#             date__lte=(timezone.now() + timedelta(days=30)).date()
+#         )
 
-        # Step 5: Calculate the optimization score
-        event_load_penalty = upcoming_events_count * 0.5  # Penalize for too many events
-        public_holiday_bonus = len(public_holidays) * 2  # Bonus for public holidays
-        optimization_score = avg_wellbeing_score - event_load_penalty + public_holiday_bonus
+#         # Step 5: Calculate the optimization score
+#         event_load_penalty = upcoming_events_count * 0.5  # Penalize for too many events
+#         public_holiday_bonus = len(public_holidays) * 2  # Bonus for public holidays
+#         optimization_score = avg_wellbeing_score - event_load_penalty + public_holiday_bonus
 
-        # Step 6: Return the result
-        return Response(
-            {
-                "optimization_score": round(optimization_score, 2),
-                "details": {
-                    "average_wellbeing_score": avg_wellbeing_score,
-                    "upcoming_events_count": upcoming_events_count,
-                    "public_holidays_count": len(public_holidays),
-                    "blackout_dates": [
-                        {"start_date": bd.start_date, "end_date": bd.end_date}
-                        for bd in blackout_dates
-                    ],
-                },
-            },
-            status=status.HTTP_200_OK,
-        )
+#         # Step 6: Return the result
+#         return Response(
+#             {
+#                 "optimization_score": round(optimization_score, 2),
+#                 "details": {
+#                     "average_wellbeing_score": avg_wellbeing_score,
+#                     "upcoming_events_count": upcoming_events_count,
+#                     "public_holidays_count": len(public_holidays),
+#                     "blackout_dates": [
+#                         {"start_date": bd.start_date, "end_date": bd.end_date}
+#                         for bd in blackout_dates
+#                     ],
+#                 },
+#             },
+#             status=status.HTTP_200_OK,
+        # )
     
-class GamificationDataView(APIView):
-    """Retrieve gamification data for the authenticated user."""
+# class GamificationDataView(APIView):
+#     """Retrieve gamification data for the authenticated user."""
 
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response({
-                "message": "Unauthorized",
-                "status": False,
-                "data": None,
-                "errors": {"detail": "User is not authenticated."}
-            }, status=status.HTTP_401_UNAUTHORIZED)
+#     def get(self, request):
+#         if not request.user.is_authenticated:
+#             return Response({
+#                 "message": "Unauthorized",
+#                 "status": False,
+#                 "data": None,
+#                 "errors": {"detail": "User is not authenticated."}
+#             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        gamification_data, _ = GamificationData.objects.get_or_create(user=request.user)
-        smart_planning_score = calculate_smart_planning_score(request.user)
+#         gamification_data, _ = GamificationData.objects.get_or_create(user=request.user)
+#         smart_planning_score = calculate_smart_planning_score(request.user)
 
-        return Response({
-            "message": "Gamification data retrieved successfully.",
-            "status": True,
-            "data": {
-                "points": gamification_data.points,
-                "streak_days": gamification_data.streak_days,
-                "badges": gamification_data.badges,
-                "smart_planning_score": smart_planning_score,
-            },
-            "errors": None
-        }, status=status.HTTP_200_OK)
+#         return Response({
+#             "message": "Gamification data retrieved successfully.",
+#             "status": True,
+#             "data": {
+#                 "points": gamification_data.points,
+#                 "streak_days": gamification_data.streak_days,
+#                 "badges": gamification_data.badges,
+#                 "smart_planning_score": smart_planning_score,
+#             },
+#             "errors": None
+#         }, status=status.HTTP_200_OK)
     
 
-class UpdateWellbeingView(APIView):
-    """Log user's wellbeing score and update gamification data."""
+# class UpdateWellbeingView(APIView):
+#     """Log user's wellbeing score and update gamification data."""
 
-    @swagger_auto_schema(request_body=WellbeingScoreSerializer)
-    def post(self, request):
-        if not request.user.is_authenticated:
-            return Response({
-                "message": "Unauthorized",
-                "status": False,
-                "data": None,
-                "errors": {"detail": "User is not authenticated."}
-            }, status=status.HTTP_401_UNAUTHORIZED)
+#     @swagger_auto_schema(request_body=WellbeingScoreSerializer)
+#     def post(self, request):
+#         if not request.user.is_authenticated:
+#             return Response({
+#                 "message": "Unauthorized",
+#                 "status": False,
+#                 "data": None,
+#                 "errors": {"detail": "User is not authenticated."}
+#             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        score = request.data.get("score")
-        score_type = request.data.get("score_type")
+#         score = request.data.get("score")
+#         score_type = request.data.get("score_type")
 
-        if not score or not score_type:
-            return Response({
-                "message": "Validation failed.",
-                "status": False,
-                "data": None,
-                "errors": {
-                    "score": "This field is required." if not score else "",
-                    "score_type": "This field is required." if not score_type else ""
-                }
-            }, status=status.HTTP_400_BAD_REQUEST)
+#         if not score or not score_type:
+#             return Response({
+#                 "message": "Validation failed.",
+#                 "status": False,
+#                 "data": None,
+#                 "errors": {
+#                     "score": "This field is required." if not score else "",
+#                     "score_type": "This field is required." if not score_type else ""
+#                 }
+#             }, status=status.HTTP_400_BAD_REQUEST)
 
-        wellbeing = WellbeingScore.objects.create(
-            user=request.user,
-            score=score,
-            score_type=score_type,
-            score_date=timezone.now()
-        )
+#         wellbeing = WellbeingScore.objects.create(
+#             user=request.user,
+#             score=score,
+#             score_type=score_type,
+#             score_date=timezone.now()
+#         )
 
-        # Update gamification data
-        gamification_data, _ = GamificationData.objects.get_or_create(user=request.user)
-        gamification_data.points += 20  # Award 20 points
-        gamification_data.save()
+#         # Update gamification data
+#         gamification_data, _ = GamificationData.objects.get_or_create(user=request.user)
+#         gamification_data.points += 20  # Award 20 points
+#         gamification_data.save()
 
-        # Award badges
-        award_badges(request.user)
+#         # Award badges
+#         award_badges(request.user)
 
-        return Response({
-            "message": "Wellbeing score logged successfully.",
-            "status": True,
-            "data": {
-                "score": wellbeing.score,
-                "score_type": wellbeing.score_type,
-                "score_date": wellbeing.score_date
-            },
-            "errors": None
-        }, status=status.HTTP_200_OK)
+#         return Response({
+#             "message": "Wellbeing score logged successfully.",
+#             "status": True,
+#             "data": {
+#                 "score": wellbeing.score,
+#                 "score_type": wellbeing.score_type,
+#                 "score_date": wellbeing.score_date
+#             },
+#             "errors": None
+#         }, status=status.HTTP_200_OK)
  
-class SuggestedDatesView(APIView):
-    """Generate suggested holidays and incorporate weather data."""
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+# class SuggestedDatesView(APIView):
+#     """Generate suggested holidays and incorporate weather data."""
+#     def get(self, request):
+#         if not request.user.is_authenticated:
+#             return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
         
-        # Step 1: Generate holiday suggestions using BetterBreaksAI
-        holiday_suggestions = generate_holiday_suggestions(request.user)
+#         # Step 1: Generate holiday suggestions using BetterBreaksAI
+#         holiday_suggestions = generate_holiday_suggestions(request.user)
 
-        # Step 2: Fetch user's coordinates
-        if request.user.home_location_coordinates:
-            try:
-                latitude, longitude = request.user.home_location_coordinates.split(",")
-                latitude = float(latitude.strip())
-                longitude = float(longitude.strip())
+#         # Step 2: Fetch user's coordinates
+#         if request.user.home_location_coordinates:
+#             try:
+#                 latitude, longitude = request.user.home_location_coordinates.split(",")
+#                 latitude = float(latitude.strip())
+#                 longitude = float(longitude.strip())
 
-                # Step 3: Adjust scores based on weather data
-                for suggestion in holiday_suggestions:
-                    start_date = suggestion["start_date"].date()  # Extract date from datetime
-                    try:
-                        weather_data = fetch_weather_data(latitude, longitude, start_date)
-                        suggestion["score"] = adjust_score_based_on_weather(suggestion["score"], weather_data)
-                    except Exception as e:
-                        # Optionally log or ignore errors fetching weather
-                        pass
-            except Exception as e:
-                # Handle invalid home_location_coordinates format gracefully
-                pass  # Skip weather adjustment
+#                 # Step 3: Adjust scores based on weather data
+#                 for suggestion in holiday_suggestions:
+#                     start_date = suggestion["start_date"].date()  # Extract date from datetime
+#                     try:
+#                         weather_data = fetch_weather_data(latitude, longitude, start_date)
+#                         suggestion["score"] = adjust_score_based_on_weather(suggestion["score"], weather_data)
+#                     except Exception as e:
+#                         # Optionally log or ignore errors fetching weather
+#                         pass
+#             except Exception as e:
+#                 # Handle invalid home_location_coordinates format gracefully
+#                 pass  # Skip weather adjustment
 
-        # Step 4: Return the final list of suggestions
-        return Response(
-            {
-                "suggestions": [
-                    {
-                        "start_date": s["start_date"].isoformat(),
-                        "end_date": s["end_date"].isoformat(),
-                        "title": s["title"],
-                        "description": s["description"],
-                        "score": s["score"],
-                    }
-                    for s in holiday_suggestions
-                ]
-            },
-            status=status.HTTP_200_OK,
-        )
+#         # Step 4: Return the final list of suggestions
+#         return Response(
+#             {
+#                 "suggestions": [
+#                     {
+#                         "start_date": s["start_date"].isoformat(),
+#                         "end_date": s["end_date"].isoformat(),
+#                         "title": s["title"],
+#                         "description": s["description"],
+#                         "score": s["score"],
+#                     }
+#                     for s in holiday_suggestions
+#                 ]
+#             },
+#             status=status.HTTP_200_OK,
+#         )
     
 
 class AddDateView(APIView):
@@ -938,11 +1053,11 @@ class DeleteDateView(APIView):
 
 
 
-class WellbeingQuestionView(APIView):
-    def get(self, request):
-        questions = WellbeingQuestion.objects.all()
-        serializer = WellbeingQuestionSerializer(questions, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+# class WellbeingQuestionView(APIView):
+#     def get(self, request):
+#         questions = WellbeingQuestion.objects.all()
+#         serializer = WellbeingQuestionSerializer(questions, many=True)
+#         return Response(serializer.data, status=status.HTTP_200_OK)
     
 # --------------BLACKOUT DATES ------------------
 class AddBlackoutDateView(APIView):

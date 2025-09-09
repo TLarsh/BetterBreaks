@@ -160,6 +160,29 @@ class DateEntry(models.Model):
     def __str__(self):
         return self.title
     
+
+
+class SpecialDate(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="special_dates"
+    )
+    title = models.CharField(max_length=255)
+    date = models.DateField()
+    description = models.TextField(blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["date"]
+        unique_together = ("user", "date", "title")
+
+    def __str__(self):
+        return f"{self.title} - {self.date}"
+    
 # Blackouts Dates Table
    
 class BlackoutDate(models.Model):
@@ -172,14 +195,14 @@ class BlackoutDate(models.Model):
         return f"Blackout from {self.start_date} to {self.end_date}"
 
 # Onboarding Data Table
-class OnboardingData(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    survey_completion_date = models.DateTimeField(auto_now_add=True)
-    survey_results = models.JSONField(null=False, blank=False)
+# class OnboardingData(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     survey_completion_date = models.DateTimeField(auto_now_add=True)
+#     survey_results = models.JSONField(null=False, blank=False)
 
-    def __str__(self):
-        return f"Onboarding data for {self.user.full_name if self.user.full_name else self.user.email}"
+#     def __str__(self):
+#         return f"Onboarding data for {self.user.full_name if self.user.full_name else self.user.email}"
     
 # Action Data Table
 class ActionData(models.Model):
@@ -195,15 +218,15 @@ class ActionData(models.Model):
         return f"Action by {self.user.full_name if self.user and self.user.full_name else (self.user.email if self.user else 'Unknown')}"
     
 # Wellbeing Score Table
-class WellbeingScore(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    score_date = models.DateTimeField(auto_now_add=True)
-    score = models.IntegerField(null=False, blank=False)
-    score_type = models.CharField(max_length=100, null=True, blank=True)
+# class WellbeingScore(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     score_date = models.DateTimeField(auto_now_add=True)
+#     score = models.IntegerField(null=False, blank=False)
+#     score_type = models.CharField(max_length=100, null=True, blank=True)
 
-    def __str__(self):
-        return f"Wellbeing score for {self.user.full_name if self.user.full_name else self.user.email} on {self.score_date}"
+#     def __str__(self):
+#         return f"Wellbeing score for {self.user.full_name if self.user.full_name else self.user.email} on {self.score_date}"
     
 class PublicHoliday(models.Model):
     country_code = models.CharField(max_length=10, null=False, blank=False)
@@ -215,20 +238,20 @@ class PublicHoliday(models.Model):
         return f"{self.name} ({self.date})"
     
 
-class GamificationData(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    points = models.PositiveIntegerField(default=0)  # Total gamification points
-    streak_days = models.PositiveIntegerField(default=0)  # Current streak of following breaks
-    badges = models.JSONField(default=list)  # List of earned badges
+# class GamificationData(models.Model):
+#     user = models.OneToOneField(User, on_delete=models.CASCADE)
+#     points = models.PositiveIntegerField(default=0)  # Total gamification points
+#     streak_days = models.PositiveIntegerField(default=0)  # Current streak of following breaks
+#     badges = models.JSONField(default=list)  # List of earned badges
 
-    def __str__(self):
-        return f"Gamification data for {self.user.full_name if self.user.full_name else self.user.email}"
+#     def __str__(self):
+#         return f"Gamification data for {self.user.full_name if self.user.full_name else self.user.email}"
     
 
-class WellbeingQuestion(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    question_text = models.TextField(null=False, blank=False)
-    score_type = models.CharField(max_length=100, null=False, blank=False)
+# class WellbeingQuestion(models.Model):
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     question_text = models.TextField(null=False, blank=False)
+#     score_type = models.CharField(max_length=100, null=False, blank=False)
 
 # ----------------------------------------
 

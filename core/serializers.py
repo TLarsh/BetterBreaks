@@ -2,12 +2,18 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
 from django.utils import timezone
-from .models import (User, Client, DateEntry, 
-WellbeingScore, BreakPlan, LeaveBalance, BreakPreferences, 
-BreakPlan, BlackoutDate, LastLogin, UserSettings,OnboardingData,
-PublicHoliday,GamificationData, PasswordResetOTP, WorkingPattern, 
-OptimizationGoal, UserNotificationPreference, WellbeingQuestion, Mood,
-Event, Booking)
+from .models import (User, Client, DateEntry, BreakPlan, LeaveBalance, BreakPreferences, 
+BreakPlan, LastLogin, UserSettings,
+PublicHoliday, PasswordResetOTP, WorkingPattern, 
+OptimizationGoal, UserNotificationPreference, Mood,
+Event, Booking,
+BlackoutDate,
+SpecialDate
+# OnboardingData,
+# WellbeingQuestion,
+# WellbeingScore,
+# GamificationData,
+)
 from .validators import validate_password, validate_leave_balance, validate_preferences, validate_break_plan
 from django.contrib.auth.hashers import make_password 
 from django.contrib.auth import get_user_model
@@ -229,35 +235,29 @@ class DateEntrySerializer(serializers.ModelSerializer):
         fields = ["start_date", "end_date", "title", "description", "optimisation_score"]
         # fields = ["uuid", "start_date", "end_date", "title", "description", "optimisation_score"]
 
-class BlackoutDateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for blackout dates.
-    """
-    class Meta:
-        model = BlackoutDate
-        fields = "__all__"
 
-class WellbeingScoreSerializer(serializers.ModelSerializer):
-    """
-    Serializer for wellbeing scores.
-    Validates score is between 0-10.
-    """
-    class Meta:
-        model = WellbeingScore
-        fields = "__all__"
 
-    def validate_score(self, value):
-        if not 0 <= value <= 10:
-            raise serializers.ValidationError("Score must be between 0 and 10")
-        return value
+# class WellbeingScoreSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for wellbeing scores.
+#     Validates score is between 0-10.
+#     """
+#     class Meta:
+#         model = WellbeingScore
+#         fields = "__all__"
 
-class UpdateSettingsSerializer(serializers.ModelSerializer):
-    """
-    Serializer for updating user settings.
-    """
-    class Meta:
-        model = UserSettings
-        fields = ["settings_json"]
+#     def validate_score(self, value):
+#         if not 0 <= value <= 10:
+#             raise serializers.ValidationError("Score must be between 0 and 10")
+#         return value
+
+# class UpdateSettingsSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for updating user settings.
+#     """
+#     class Meta:
+#         model = UserSettings
+#         fields = ["settings_json"]
 
 class ActionLogSerializer(serializers.Serializer):
     """
@@ -273,13 +273,13 @@ class ActionLogSerializer(serializers.Serializer):
             raise serializers.ValidationError("Duration cannot be negative")
         return value
     
-class OnboardingDataSerializer(serializers.ModelSerializer):
-    """
-    Serializer for onboarding data.
-    """
-    class Meta:
-        model = OnboardingData
-        fields = ["id", "survey_completion_date", "survey_results"]
+# class OnboardingDataSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for onboarding data.
+#     """
+#     class Meta:
+#         model = OnboardingData
+#         fields = ["id", "survey_completion_date", "survey_results"]
 
 
 class PublicHolidaySerializer(serializers.ModelSerializer):
@@ -288,26 +288,26 @@ class PublicHolidaySerializer(serializers.ModelSerializer):
         fields = ["id", "name", "date", "country_code"]
 
 
-class WellbeingQuestionSerializer(serializers.ModelSerializer):
-    """
-    Serializer for the WellbeingQuestion model.
-    """
-    class Meta:
-        model = WellbeingQuestion
-        fields = ["id", "question_text", "score_type"]
+# class WellbeingQuestionSerializer(serializers.ModelSerializer):
+#     """
+#     Serializer for the WellbeingQuestion model.
+#     """
+#     class Meta:
+#         model = WellbeingQuestion
+#         fields = ["id", "question_text", "score_type"]
 
-class GamificationDataSerializer(serializers.ModelSerializer):
-    smart_planning_score = serializers.IntegerField(read_only=True)
+# class GamificationDataSerializer(serializers.ModelSerializer):
+#     smart_planning_score = serializers.IntegerField(read_only=True)
 
-    class Meta:
-        model = GamificationData
-        fields = [
-            "points",
-            "streak_days",
-            "badges",
-            "smart_planning_score"
-        ]
-        read_only_fields = ["points", "streak_days", "badges", "smart_planning_score"]
+#     class Meta:
+#         model = GamificationData
+#         fields = [
+#             "points",
+#             "streak_days",
+#             "badges",
+#             "smart_planning_score"
+#         ]
+#         read_only_fields = ["points", "streak_days", "badges", "smart_planning_score"]
 
 
 # ------------BREAK PLAN SERIALIZZER--------------
@@ -501,6 +501,26 @@ class WorkingPatternSerializer(serializers.ModelSerializer):
         model = WorkingPattern
         fields = '__all__'
         read_only_fields = ['user', 'created_at']
+
+# ======= SPECIAL-DATE-SERILIZER ========
+class SpecialDateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SpecialDate
+        fields = ["id", "title", "date", "description", "created_at", "updated_at"]
+        extra_kwargs = {
+            "title": {"required": True},
+            "date": {"required": True},
+            "description": {"required": False},
+        }
+
+# ======= DECOY-BLACKOUT-DATE-LIST-SERILIZER ========
+class BlackoutDateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for blackout dates.
+    """
+    class Meta:
+        model = BlackoutDate
+        fields = "__all__"
 
 # ======= BLACKOUT-DATE-LIST-SERILIZER ========
 class BlackOutDateListSerializer(serializers.ListSerializer):

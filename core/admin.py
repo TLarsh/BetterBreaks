@@ -6,10 +6,10 @@ from .models import (
     LastLogin,
     DateEntry,
     BlackoutDate,
-    WellbeingScore,
+    # WellbeingScore,
     UserSettings,
     ActionData,
-    OnboardingData,
+    # OnboardingData,
     UserNotificationPreference,
     BreakPlan,
     LeaveBalance,
@@ -94,12 +94,12 @@ class BlackoutDateAdmin(admin.ModelAdmin):
     ordering = ("start_date",)
 
 # Custom Admin Configuration for WellbeingScore Model
-class WellbeingScoreAdmin(admin.ModelAdmin):
-    list_display = ("user", "score", "score_date")
-    list_filter = ("score_date",)
-    search_fields = ("user__username",)
-    date_hierarchy = "score_date"
-    ordering = ("-score_date",)
+# class WellbeingScoreAdmin(admin.ModelAdmin):
+#     list_display = ("user", "score", "score_date")
+#     list_filter = ("score_date",)
+#     search_fields = ("user__username",)
+#     date_hierarchy = "score_date"
+#     ordering = ("-score_date",)
 
 # Custom Admin Configuration for Client Model
 class ClientAdmin(admin.ModelAdmin):
@@ -226,8 +226,8 @@ admin.site.register(Client, ClientAdmin)
 admin.site.register(LastLogin, LastLoginAdmin)
 admin.site.register(DateEntry, DateEntryAdmin)
 admin.site.register(BlackoutDate, BlackoutDateAdmin)
-admin.site.register(WellbeingScore, WellbeingScoreAdmin)
+# admin.site.register(WellbeingScore, WellbeingScoreAdmin)
 admin.site.register(ActionData, ActionDataAdmin)
-admin.site.register(OnboardingData, OnboardingDataAdmin)
+# admin.site.register(OnboardingData, OnboardingDataAdmin)
 admin.site.register(UserSettings, UserSettingsAdmin)
 # admin.site.register(UserNotificationPreference, UserNotificationPreferenceAdmin)

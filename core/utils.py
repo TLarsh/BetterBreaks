@@ -6,7 +6,7 @@ import requests
 from datetime import datetime
 from datetime import timedelta
 from django.utils import timezone
-from .models import WellbeingScore, DateEntry, GamificationData
+# from .models import WellbeingScore, DateEntry, GamificationData
 import random
 from rest_framework.response import Response
 from email.mime.text import MIMEText
@@ -55,120 +55,124 @@ def create_calendar_event(user, date_entry):
 
 from datetime import timedelta
 from django.utils import timezone
-from .models import WellbeingScore, DateEntry, GamificationData
+from .models import (
+    DateEntry, 
+    # GamificationData,
+    # WellbeingScore,
+)
 
-def calculate_smart_planning_score(user):
-    """
-    Calculate the Smart Planning Score based on break adherence and engagement.
-    """
-    # Step 1: Count recent AI-recommended breaks followed
-    recent_breaks = DateEntry.objects.filter(
-        user=user,
-        start_date__gte=timezone.now() - timedelta(days=30)
-    ).count()
+# def calculate_smart_planning_score(user):
+#     """
+#     Calculate the Smart Planning Score based on break adherence and engagement.
+#     """
+#     # Step 1: Count recent AI-recommended breaks followed
+#     recent_breaks = DateEntry.objects.filter(
+#         user=user,
+#         start_date__gte=timezone.now() - timedelta(days=30)
+#     ).count()
 
-    # Step 2: Count recent wellbeing check-ins
-    recent_check_ins = WellbeingScore.objects.filter(
-        user=user,
-        score_date__gte=timezone.now() - timedelta(days=30)
-    ).count()
+#     # Step 2: Count recent wellbeing check-ins
+#     recent_check_ins = WellbeingScore.objects.filter(
+#         user=user,
+#         score_date__gte=timezone.now() - timedelta(days=30)
+#     ).count()
 
-    # Step 3: Calculate the score (example formula)
-    score = recent_breaks * 5 + recent_check_ins * 3
-    return score
+#     # Step 3: Calculate the score (example formula)
+#     score = recent_breaks * 5 + recent_check_ins * 3
+#     return score
 
-def award_badges(user):
-    """
-    Award badges based on user's gamification data.
-    """
-    gamification_data = GamificationData.objects.get_or_create(user=user)[0]
+# def award_badges(user):
+#     """
+#     Award badges based on user's gamification data.
+#     """
+#     gamification_data = GamificationData.objects.get_or_create(user=user)[0]
 
-    # Example Badge Criteria
-    if gamification_data.streak_days >= 30:
-        if "Break Pro" not in gamification_data.badges:
-            gamification_data.badges.append("Break Pro")
-    if gamification_data.points >= 500:
-        if "Wellness Warrior" not in gamification_data.badges:
-            gamification_data.badges.append("Wellness Warrior")
+#     # Example Badge Criteria
+#     if gamification_data.streak_days >= 30:
+#         if "Break Pro" not in gamification_data.badges:
+#             gamification_data.badges.append("Break Pro")
+#     if gamification_data.points >= 500:
+#         if "Wellness Warrior" not in gamification_data.badges:
+#             gamification_data.badges.append("Wellness Warrior")
 
-    gamification_data.save()
+#     gamification_data.save()
 
-def calculate_smart_planning_score(user):
-    """
-    Calculate the Smart Planning Score based on break adherence and engagement.
-    """
-    # Step 1: Count recent AI-recommended breaks followed
-    recent_breaks = DateEntry.objects.filter(
-        user=user,
-        start_date__gte=timezone.now() - timedelta(days=30)
-    ).count()
+# def calculate_smart_planning_score(user):
+#     """
+#     Calculate the Smart Planning Score based on break adherence and engagement.
+#     """
+#     # Step 1: Count recent AI-recommended breaks followed
+#     recent_breaks = DateEntry.objects.filter(
+#         user=user,
+#         start_date__gte=timezone.now() - timedelta(days=30)
+#     ).count()
 
-    # Step 2: Count recent wellbeing check-ins
-    recent_check_ins = WellbeingScore.objects.filter(
-        user=user,
-        score_date__gte=timezone.now() - timedelta(days=30)
-    ).count()
+#     # Step 2: Count recent wellbeing check-ins
+#     recent_check_ins = WellbeingScore.objects.filter(
+#         user=user,
+#         score_date__gte=timezone.now() - timedelta(days=30)
+#     ).count()
 
-    # Step 3: Calculate the score (example formula)
-    score = recent_breaks * 5 + recent_check_ins * 3
-    return score
+#     # Step 3: Calculate the score (example formula)
+#     score = recent_breaks * 5 + recent_check_ins * 3
+#     return score
 
-def award_badges(user):
-    """
-    Award badges based on user's gamification data.
-    """
-    gamification_data = GamificationData.objects.get_or_create(user=user)[0]
+# def award_badges(user):
+#     """
+#     Award badges based on user's gamification data.
+#     """
+#     gamification_data = GamificationData.objects.get_or_create(user=user)[0]
 
-    # Example Badge Criteria
-    if gamification_data.streak_days >= 30:
-        if "Break Pro" not in gamification_data.badges:
-            gamification_data.badges.append("Break Pro")
-    if gamification_data.points >= 500:
-        if "Wellness Warrior" not in gamification_data.badges:
-            gamification_data.badges.append("Wellness Warrior")
+#     # Example Badge Criteria
+#     if gamification_data.streak_days >= 30:
+#         if "Break Pro" not in gamification_data.badges:
+#             gamification_data.badges.append("Break Pro")
+#     if gamification_data.points >= 500:
+#         if "Wellness Warrior" not in gamification_data.badges:
+#             gamification_data.badges.append("Wellness Warrior")
 
-    gamification_data.save()
+#     gamification_data.save()
 
 
-def generate_holiday_suggestions(user):
-    """
-    Simulate generating holiday suggestions using BetterBreaksAI.
-    Returns a list of suggested holidays with placeholders for missing data.
-    """
-    suggestions = []
-    start_date = datetime.now() + timedelta(days=random.randint(7, 30))  # Random future date
-    end_date = start_date + timedelta(days=random.randint(1, 7))  # Random duration (1-7 days)
+# def generate_holiday_suggestions(user):
+#     """
+#     Simulate generating holiday suggestions using BetterBreaksAI.
+#     Returns a list of suggested holidays with placeholders for missing data.
+#     """
+#     suggestions = []
+#     start_date = datetime.now() + timedelta(days=random.randint(7, 30))  # Random future date
+#     end_date = start_date + timedelta(days=random.randint(1, 7))  # Random duration (1-7 days)
 
-    suggestions.append({
-        "start_date": start_date,
-        "end_date": end_date,
-        "title": "Suggested Holiday",
-        "description": "A relaxing break suggested by BetterBreaksAI.",
-        "score": random.randint(50, 100),  # Placeholder score
-    })
+#     suggestions.append({
+#         "start_date": start_date,
+#         "end_date": end_date,
+#         "title": "Suggested Holiday",
+#         "description": "A relaxing break suggested by BetterBreaksAI.",
+#         "score": random.randint(50, 100),  # Placeholder score
+#     })
 
-    return suggestions
+#     return suggestions
 
-def fetch_weather_data(latitude, longitude, date):
-    """
-    Fetch daily weather forecast from Apple WeatherKit for a specific date.
-    """
-    url = "https://api.weatherkit.apple.com/v1/weather"
-    api_key = "your_apple_weatherkit_api_key"  # Replace with your actual API key
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-    }
-    params = {
-        "latitude": latitude,
-        "longitude": longitude,
-        "dailyStart": date.strftime("%Y-%m-%d"),
-        "dailyEnd": date.strftime("%Y-%m-%d"),
-    }
+# def fetch_weather_data(latitude, longitude, date):
+#     """
+#     Fetch daily weather forecast from Apple WeatherKit for a specific date.
+#     """
+#     url = "https://api.weatherkit.apple.com/v1/weather"
+#     api_key = "your_apple_weatherkit_api_key"  # Replace with your actual API key
+#     headers = {
+#         "Authorization": f"Bearer {api_key}",
+#     }
+#     params = {
+#         "latitude": latitude,
+#         "longitude": longitude,
+#         "dailyStart": date.strftime("%Y-%m-%d"),
+#         "dailyEnd": date.strftime("%Y-%m-%d"),
+#     }
 
-    response = requests.get(url, headers=headers, params=params)
-    if response.status_code == 200:
-        return response.json()
-    return None
+#     response = requests.get(url, headers=headers, params=params)
+#     if response.status_code == 200:
+#         return response.json()
+#     return None
 
 
 # def fetch_8day_weather_forecast_openweathermap(latitude, longitude):
