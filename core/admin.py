@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from .models import (
     User,
+    ContactMessage,
     Client,
     LastLogin,
     DateEntry,
@@ -156,6 +157,16 @@ class BreakPlanAdmin(admin.ModelAdmin):
         }),
     )
 
+@admin.register(ContactMessage)
+class ContactMessageAdmin(admin.ModelAdmin):
+    list_display = (
+        "full_name",
+        "email",
+        "subject",
+        "message",
+    )
+    search_fields = ("full_name",)
+
 # Custom Admin Configuration for UserSettings Model
 class UserSettingsAdmin(admin.ModelAdmin):
     list_display = (
@@ -165,8 +176,8 @@ class UserSettingsAdmin(admin.ModelAdmin):
         "timezone",
         "currency"
     )
-    search_fields = ("user__username",)
-    ordering = ("user__username",)
+    search_fields = ("user__full_name",)
+    ordering = ("user__full_name",)
 
 # Custom Admin Configuration for UserNotificationPrefrence Model
 @admin.register(UserNotificationPreference)

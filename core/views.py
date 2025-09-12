@@ -12,6 +12,7 @@ from django.utils.timezone import now
 from django.core.paginator import Paginator
 from django.utils.dateparse import parse_date
 from django.shortcuts import get_object_or_404
+from django.http import Http404
 from django.contrib.auth import get_user_model
 from django.db import transaction, IntegrityError
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -19,6 +20,7 @@ from datetime import timedelta, date, datetime
 from dateutil import parser as date_parser
 from .validators import validate_password
 from .models import (LeaveBalance, BreakPreferences, OptimizationGoal, UserNotificationPreference, WorkingPattern, 
+BreakScore, StreakScore, Badge, OptimizationScore
 # GamificationData
 )
 from .serializers import (
@@ -28,14 +30,17 @@ from .serializers import (
     RequestOTPSerializer,
     VerifyOTPSerializer,
     ResetPasswordSerializer,
+    ChangeEmailSerializer,
+    ChangePasswordSerializer,
     UserSerializer,
+    ContactMessageSerializer,
     DateEntrySerializer,
     BlackoutDateSerializer,
     BlackOutDateSerializer,
     SpecialDateSerializer,
     # UpdateSettingsSerializer,
     ActionLogSerializer,
-    # PublicHolidaySerializer,
+    PublicHolidaySerializer,
     # OnboardingDataSerializer,
     # WellbeingScoreSerializer,
     # WellbeingQuestionSerializer,
@@ -45,9 +50,16 @@ from .serializers import (
     BreakPlanListSerializer,
     BreakPlanUpdateSerializer,
     LeaveBalanceSerializer, BreakPreferencesSerializer, BreakPlanSerializer,
+    # Gamification serializers
+    BreakScoreSerializer, StreakScoreSerializer, BadgeSerializer, OptimizationScoreSerializer,
     #______firstLoginSetupSerializer____
     FirstLoginSetupSerializer,
     FirstLoginSetupDataSerializer,
+    # Gamification serializers
+    BreakScoreSerializer,
+    StreakScoreSerializer,
+    BadgeSerializer,
+    OptimizationScoreSerializer,
     # _____settingsSerializer___
     UserSettingsSerializer,
     # _____notificationSerializer___
@@ -73,7 +85,7 @@ from .models import (
     BlackoutDate,
     SpecialDate,
     # GamificationData,
-    # PublicHoliday,
+    PublicHoliday,
     # OnboardingData,
     # GamificationData,
     # WellbeingScore,
@@ -100,6 +112,34 @@ from .swagger_api_fe import (
     weather_forecast_schema,
     initiate_payment_docs,
     verify_payment_docs,
+    holiday_detail_get,
+    holiday_detail_put,
+    holiday_detail_delete,
+    upcoming_holidays_get,
+    break_log_list,
+    break_log_create,
+    break_log_retrieve,
+    break_log_update,
+    break_log_delete,
+    optimization_list,
+    optimization_create,
+    optimization_retrieve,
+    optimization_update,
+    optimization_delete,
+    optimization_calculate,
+    score_summary,
+    streak_list,
+    streak_create,
+    streak_retrieve,
+    streak_update,
+    streak_delete,
+    badge_list,
+    badge_create,
+    badge_retrieve,
+    badge_update,
+    badge_delete,
+    badge_eligibility,
+
 )
 from.helper import validate_and_create_user
 from .utils import (
@@ -359,6 +399,73 @@ class ResetPasswordView(APIView):
             errors=serializer.errors,
             status_code=status.HTTP_400_BAD_REQUEST
         )
+
+########### CHANGE EMAIL AND PASSWORD VIEW ###################
+
+class ChangeEmailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=ChangeEmailSerializer)
+    def post(self, request):
+        serializer = ChangeEmailSerializer(data=request.data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return success_response(
+                message="Email updated successfully.",
+                data={"email": request.user.email},
+                status_code=status.HTTP_200_OK
+            )
+        return error_response(
+            message="Email update failed.",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=ChangePasswordSerializer)
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+        if serializer.is_valid():
+            serializer.save()
+            return success_response(
+                message="Password updated successfully.",
+                data=None,
+                status_code=status.HTTP_200_OK
+            )
+        return error_response(
+            message="Password update failed.",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+##### CONTACT US ##############################################
+
+class SendMessageView(APIView):
+    """Send us a message API"""
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    @swagger_auto_schema(request_body=ContactMessageSerializer)
+    def post(self, request):
+        serializer = ContactMessageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return success_response(
+                message="Your message has been received. We’ll get back to you soon.",
+                data=None,
+                status_code=status.HTTP_201_CREATED
+            )
+        return error_response(
+            message="Failed to send message.",
+            errors=serializer.errors,
+            status_code=status.HTTP_400_BAD_REQUEST
+        )
+
+######## DATE LIST ################
+
 class DateListView(APIView):
     """Retrieve authenticated user's dates."""
     def get(self, request):
@@ -539,25 +646,25 @@ class SpecialDateDetailView(APIView):
         serializer = SpecialDateSerializer(special_date)
         return success_response("Special date retrieved successfully", serializer.data)
 
-    @swagger_auto_schema(
-        operation_summary="Update Special Date",
-        request_body=SpecialDateSerializer,
-        responses={200: SpecialDateSerializer}
-    )
-    def patch(self, request, pk, *args, **kwargs):
-        special_date = self.get_object(pk, request.user)
-        if not special_date:
-            return error_response("Special date not found", status.HTTP_404_NOT_FOUND)
+    # @swagger_auto_schema(
+    #     operation_summary="Update Special Date",
+    #     request_body=SpecialDateSerializer,
+    #     responses={200: SpecialDateSerializer}
+    # )
+    # def patch(self, request, pk, *args, **kwargs):
+    #     special_date = self.get_object(pk, request.user)
+    #     if not special_date:
+    #         return error_response("Special date not found", status.HTTP_404_NOT_FOUND)
 
-        serializer = SpecialDateSerializer(
-            special_date, data=request.data, partial=True
-        )
-        if serializer.is_valid():
-            special_date = serializer.save()
-            return success_response(
-                "Special date updated successfully", serializer.data
-            )
-        return error_response("Validation error", serializer.errors, 400)
+        # serializer = SpecialDateSerializer(
+        #     special_date, data=request.data, partial=True
+        # )
+        # if serializer.is_valid():
+        #     special_date = serializer.save()
+        #     return success_response(
+        #         "Special date updated successfully", serializer.data
+        #     )
+        # return error_response("Validation error", serializer.errors, 400)
 
     @swagger_auto_schema(
         operation_summary="Delete Special Date",
@@ -1211,7 +1318,61 @@ class ListUserBreakPlansView(APIView):
 class UpdateBreakPlanView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @swagger_auto_schema(request_body=BreakPlanUpdateSerializer)
+    @swagger_auto_schema(
+        request_body=BreakPlanUpdateSerializer,
+        operation_description="Update a break plan. When a break plan is approved, gamification rewards are automatically created.",
+        responses={
+            200: openapi.Response(
+                description="Break plan updated successfully with gamification rewards if approved",
+                examples={
+                    "application/json": {
+                        "message": "Break plan updated successfully.",
+                        "status": True,
+                        "data": {
+                            "plan": {
+                                "id": "uuid-string",
+                                "startDate": "2023-06-01T00:00:00Z",
+                                "endDate": "2023-06-07T00:00:00Z",
+                                "description": "Summer vacation",
+                                "status": "approved",
+                                "updatedAt": "2023-05-15T14:30:00Z"
+                            },
+                            "gamification": {
+                                "break_score": {
+                                    "id": 1,
+                                    "score_date": "2023-06-01",
+                                    "score_value": 10,
+                                    "frequency_points": 5,
+                                    "adherence_points": 5,
+                                    "wellbeing_impact": "positive",
+                                    "break_type": "vacation",
+                                    "notes": "Break plan approved"
+                                },
+                                "streak": {
+                                    "id": 1,
+                                    "current_streak": 1,
+                                    "longest_streak": 1,
+                                    "streak_period": "monthly"
+                                },
+                                "recent_badges": [
+                                    {
+                                        "id": 1,
+                                        "badge_type": "consistent_breaker",
+                                        "level": 1,
+                                        "description": "Took your first break!"
+                                    }
+                                ]
+                            }
+                        },
+                        "errors": None
+                    }
+                }
+            ),
+            400: openapi.Response(description="Invalid input"),
+            404: openapi.Response(description="Break plan not found"),
+            500: openapi.Response(description="Server error")
+        }
+    )
     def put(self, request, planId):
         try:
             user = request.user
@@ -1224,6 +1385,21 @@ class UpdateBreakPlanView(APIView):
             serializer = BreakPlanUpdateSerializer(plan, data=request.data)
             if serializer.is_valid():
                 updated_plan = serializer.save()
+                
+                # Check if plan was approved and include gamification info
+                gamification_data = None
+                if updated_plan.status == 'approved':
+                    # Get gamification data for the user
+                    break_scores = BreakScore.objects.filter(user=user).order_by('-created_at')[:1]
+                    streak_scores = StreakScore.objects.filter(user=user).order_by('-updated_at')[:1]
+                    badges = Badge.objects.filter(user=user).order_by('-created_at')[:3]
+                    
+                    gamification_data = {
+                        "break_score": BreakScoreSerializer(break_scores[0]).data if break_scores else None,
+                        "streak": StreakScoreSerializer(streak_scores[0]).data if streak_scores else None,
+                        "recent_badges": BadgeSerializer(badges, many=True).data if badges else [],
+                    }
+                
                 return Response({
                     "message": "Break plan updated successfully.",
                     "status": True,
@@ -1235,7 +1411,8 @@ class UpdateBreakPlanView(APIView):
                             "description": updated_plan.description,
                             "status": updated_plan.status,
                             "updatedAt": updated_plan.updated_at,
-                        }
+                        },
+                        "gamification": gamification_data
                     },
                     "errors": None
                 }, status=status.HTTP_200_OK)
@@ -2019,33 +2196,29 @@ class FirstLoginSetupDataView(APIView):
             message="First login setup data retrieved successfully",
             data=data,
         )
+        # # --- Update BreakPlan if provided ---
+        # bp_data = data.get("BreakPlan")
+        # if bp_data is not None:
+        #     break_plan = BreakPlan.objects.filter(user=user).first()
+        #     if break_plan:
+        #         bp_serializer = BreakPlanSerializer(
+        #             break_plan, data=bp_data, partial=True, context={"request": request}
+        #         )
+        #         if bp_serializer.is_valid(raise_exception=True):
+        #             break_plan = bp_serializer.save()
+        #             updated["BreakPlan"] = bp_serializer.data
+        #     else:
+        #         bp_serializer = BreakPlanSerializer(
+        #             data=bp_data, context={"request": request}
+        #         )
+        #         if bp_serializer.is_valid(raise_exception=True):
+        #             break_plan = bp_serializer.save(user=user, leave_balance=user.leave_balance)
+        #             updated["BreakPlan"] = bp_serializer.data
 
-
-
-
-        # --- Update BreakPlan if provided ---
-        bp_data = data.get("BreakPlan")
-        if bp_data is not None:
-            break_plan = BreakPlan.objects.filter(user=user).first()
-            if break_plan:
-                bp_serializer = BreakPlanSerializer(
-                    break_plan, data=bp_data, partial=True, context={"request": request}
-                )
-                if bp_serializer.is_valid(raise_exception=True):
-                    break_plan = bp_serializer.save()
-                    updated["BreakPlan"] = bp_serializer.data
-            else:
-                bp_serializer = BreakPlanSerializer(
-                    data=bp_data, context={"request": request}
-                )
-                if bp_serializer.is_valid(raise_exception=True):
-                    break_plan = bp_serializer.save(user=user, leave_balance=user.leave_balance)
-                    updated["BreakPlan"] = bp_serializer.data
-
-        return success_response(
-            message="First login setup data updated successfully",
-            data=updated,
-        )
+        # return success_response(
+        #     message="First login setup data updated successfully",
+        #     data=updated,
+        # )
 
 
 
@@ -2161,3 +2334,488 @@ class VerifyPaymentView(APIView):
             }, status=404)
 
         return PaystackGateway.verify_payment(reference, booking)
+
+
+
+
+#################### Hokidays and gamifications #################
+####################################################################
+
+class HolidayView(APIView):
+    permission_classes = [IsAuthenticated]
+    @swagger_auto_schema(
+        operation_summary="Get all holidays",
+        operation_description="Retrieve all public holidays for the logged-in user's holiday calendar.",
+        responses={200: PublicHolidaySerializer(many=True)},
+    )
+    
+    def get(self, request):
+        """Get all holidays for the user's calendar"""
+        user = request.user
+        calendar = user.holiday_calendar
+        if not calendar:
+            return Response({"error": "No holiday calendar set up"}, status=400)
+            
+        holidays = PublicHoliday.objects.filter(calendar=calendar)
+        serializer = PublicHolidaySerializer(holidays, many=True)
+        return Response(serializer.data)
+    
+    def post(self, request):
+        """Create a new holiday"""
+        user = request.user
+        calendar = user.holiday_calendar
+        if not calendar:
+            return Response({"error": "No holiday calendar set up"}, status=400)
+            
+        serializer = PublicHolidaySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(calendar=calendar)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class HolidayDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get_object(self, pk, user):
+        try:
+            calendar = user.holiday_calendar
+            if not calendar:
+                return None
+            return PublicHoliday.objects.get(pk=pk, calendar=calendar)
+        except PublicHoliday.DoesNotExist:
+            return None
+    
+    @holiday_detail_get
+    def get(self, request, pk):
+        """Get a specific holiday"""
+        holiday = self.get_object(pk, request.user)
+        if not holiday:
+            return Response({"error": "Holiday not found"}, status=404)
+        serializer = PublicHolidaySerializer(holiday)
+        return Response(serializer.data)
+    
+    @holiday_detail_put
+    def put(self, request, pk):
+        """Update a specific holiday"""
+        holiday = self.get_object(pk, request.user)
+        if not holiday:
+            return Response({"error": "Holiday not found"}, status=404)
+        serializer = PublicHolidaySerializer(holiday, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @holiday_detail_delete
+    def delete(self, request, pk):
+        """Delete a specific holiday"""
+        holiday = self.get_object(pk, request.user)
+        if not holiday:
+            return Response({"error": "Holiday not found"}, status=404)
+        holiday.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class UpcomingHolidaysView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @upcoming_holidays_get
+    def get(self, request):
+        """Get upcoming holidays for the user's country"""
+        user = request.user
+        calendar = user.holiday_calendar
+        if not calendar:
+            return Response({"error": "No holiday calendar set up"}, status=400)
+            
+        today = date.today()
+        upcoming = PublicHoliday.objects.filter(
+            calendar=calendar,
+            date__gte=today
+        ).order_by('date')[:10]
+        
+        serializer = PublicHolidaySerializer(upcoming, many=True)
+        return Response(serializer.data)
+
+
+
+# LOGGING ENDPOINTS ###############################
+
+
+class BreakLogListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @break_log_list
+    def get(self, request):
+        """Get all break logs for the current user"""
+        break_scores = BreakScore.objects.filter(user=request.user)
+        serializer = BreakScoreSerializer(break_scores, many=True)
+        return Response(serializer.data)
+    
+    @break_log_create
+    def post(self, request):
+        """Log when a user takes a break"""
+        serializer = BreakScoreSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+       
+        break_score = serializer.save(user=request.user)
+        
+       
+        streak, created = StreakScore.objects.get_or_create(
+            user=request.user,
+            streak_period=request.data.get('streak_period', 'monthly')
+        )
+        streak.increment_streak(break_score.score_date)
+        streak.save()
+        
+       
+        user = request.user
+        user.total_break_score += break_score.score_value
+        if streak.longest_streak > user.highest_streak:
+            user.highest_streak = streak.longest_streak
+        user.save()
+        
+        return Response(serializer.data, status=201)
+
+class BreakLogDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get_object(self, pk):
+        try:
+            return BreakScore.objects.get(pk=pk, user=self.request.user)
+        except BreakScore.DoesNotExist:
+            raise Http404
+    
+    @break_log_retrieve
+    def get(self, request, pk):
+        """Get a specific break log"""
+        break_score = self.get_object(pk)
+        serializer = BreakScoreSerializer(break_score)
+        return Response(serializer.data)
+    
+    @break_log_update
+    def put(self, request, pk):
+        """Update a specific break log"""
+        break_score = self.get_object(pk)
+        serializer = BreakScoreSerializer(break_score, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    @break_log_delete
+    def delete(self, request, pk):
+        """Delete a specific break log"""
+        break_score = self.get_object(pk)
+        break_score.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+########### SCORE ENDPOINTS #####################
+##############################################
+
+
+class ScoreSummaryView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @score_summary
+    def get(self, request):
+        """Get user's current break score and streak information"""
+        user = request.user
+        
+        # Get latest break scores
+        recent_breaks = BreakScore.objects.filter(user=user).order_by('-score_date')[:5]
+        break_serializer = BreakScoreSerializer(recent_breaks, many=True)
+        
+        # Get streak information
+        streaks = StreakScore.objects.filter(user=user)
+        streak_serializer = StreakScoreSerializer(streaks, many=True)
+        
+        # Get optimization score
+        optimization = OptimizationScore.objects.filter(user=user).order_by('-score_date').first()
+        optimization_serializer = OptimizationScoreSerializer(optimization) if optimization else None
+        
+        return Response({
+            "total_break_score": user.total_break_score,
+            "highest_streak": user.highest_streak,
+            "recent_breaks": break_serializer.data,
+            "streaks": streak_serializer.data,
+            "optimization": optimization_serializer.data if optimization else None,
+        })
+
+
+
+########STREAK BREAK ENDPOINT ###########################
+############################################
+
+
+class StreakListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @streak_list
+    def get(self, request):
+        """Get all streak scores for the current user"""
+        streaks = StreakScore.objects.filter(user=request.user)
+        serializer = StreakScoreSerializer(streaks, many=True)
+        return Response(serializer.data)
+    
+    # @streak_create
+    # def post(self, request):
+    #     """Create a new streak score"""
+    #     serializer = StreakScoreSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save(user=request.user)
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class StreakDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get_object(self, pk):
+        try:
+            return StreakScore.objects.get(pk=pk, user=self.request.user)
+        except StreakScore.DoesNotExist:
+            raise Http404
+    
+    @streak_retrieve
+    def get(self, request, pk):
+        """Get a specific streak score"""
+        streak = self.get_object(pk)
+        serializer = StreakScoreSerializer(streak)
+        return Response(serializer.data)
+    
+    # @streak_update
+    # def put(self, request, pk):
+    #     """Update a specific streak score"""
+    #     streak = self.get_object(pk)
+    #     serializer = StreakScoreSerializer(streak, data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()
+    #     return Response(serializer.data)
+    
+    @streak_delete
+    def delete(self, request, pk):
+        """Delete a specific streak score"""
+        streak = self.get_object(pk)
+        streak.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+
+########### BADGE ENDPOINT ############
+###############################
+
+
+class BadgeListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @badge_list
+    def get(self, request):
+        """Get all badges for the current user"""
+        badges = Badge.objects.filter(user=request.user)
+        serializer = BadgeSerializer(badges, many=True)
+        return Response(serializer.data)
+    
+    # @badge_create
+    # def post(self, request):
+    #     """Create a new badge"""
+    #     serializer = BadgeSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save(user=request.user)
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class BadgeDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get_object(self, pk):
+        try:
+            return Badge.objects.get(pk=pk, user=self.request.user)
+        except Badge.DoesNotExist:
+            raise Http404
+    
+    @badge_retrieve
+    def get(self, request, pk):
+        """Get a specific badge"""
+        badge = self.get_object(pk)
+        serializer = BadgeSerializer(badge)
+        return Response(serializer.data)
+    
+    @badge_update
+    def put(self, request, pk):
+        """Update a specific badge"""
+        badge = self.get_object(pk)
+        serializer = BadgeSerializer(badge, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    @badge_delete
+    def delete(self, request, pk):
+        """Delete a specific badge"""
+        badge = self.get_object(pk)
+        badge.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class BadgeEligibilityView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @badge_eligibility
+    def post(self, request):
+        """Check if user is eligible for new badges and award them"""
+        user = request.user
+        new_badges = []
+        
+        # Check for Weekend Breaker badge
+        weekend_breaks = BreakScore.objects.filter(
+            user=user,
+            break_type='weekend',
+            score_date__gte=date.today() - timedelta(days=30)
+        ).count()
+        
+        if weekend_breaks >= 8 and not Badge.objects.filter(user=user, badge_type='weekend_breaker', level='bronze').exists():
+            badge = Badge.objects.create(
+                user=user,
+                badge_type='weekend_breaker',
+                level='bronze',
+                description="Took breaks on 8 weekends in a month",
+                requirements_met={"weekend_breaks": weekend_breaks}
+            )
+            new_badges.append(badge)
+            user.total_badges += 1
+            user.save()
+        
+        # More checks still coming here...
+        
+        serializer = BadgeSerializer(new_badges, many=True)
+        return Response(serializer.data)
+
+
+
+
+############ OPTIMISATION ENDPINT ############
+############################################ In core/views.py
+
+class OptimizationListCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @optimization_list
+    def get(self, request):
+        """Get all optimization scores for the current user"""
+        optimization_scores = OptimizationScore.objects.filter(user=request.user)
+        serializer = OptimizationScoreSerializer(optimization_scores, many=True)
+        return Response(serializer.data)
+    
+    # @optimization_create
+    # def post(self, request):
+    #     """Create a new optimization score"""
+    #     serializer = OptimizationScoreSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save(user=request.user)
+    #     return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class OptimizationDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get_object(self, pk):
+        try:
+            return OptimizationScore.objects.get(pk=pk, user=self.request.user)
+        except OptimizationScore.DoesNotExist:
+            raise Http404
+    
+    @optimization_retrieve
+    def get(self, request, pk):
+        """Get a specific optimization score"""
+        optimization = self.get_object(pk)
+        serializer = OptimizationScoreSerializer(optimization)
+        return Response(serializer.data)
+    
+    @optimization_update
+    def put(self, request, pk):
+        """Update a specific optimization score"""
+        optimization = self.get_object(pk)
+        serializer = OptimizationScoreSerializer(optimization, data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+    
+    @optimization_delete
+    def delete(self, request, pk):
+        """Delete a specific optimization score"""
+        optimization = self.get_object(pk)
+        optimization.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class OptimizationCalculateView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    @optimization_calculate
+    def post(self, request):
+        """Calculate optimization score based on user's break patterns"""
+        user = request.user
+        
+        # Get user's break preferences and working pattern
+        try:
+            preferences = BreakPreferences.objects.get(user=user)
+            pattern = WorkingPattern.objects.get(user=user)
+        except (BreakPreferences.DoesNotExist, WorkingPattern.DoesNotExist):
+            return Response({"error": "User preferences or working pattern not set"}, status=400)
+        
+        # Calculate component scores based on user data
+        break_timing_score = self._calculate_timing_score(user, pattern, preferences)
+        break_frequency_score = self._calculate_frequency_score(user, preferences)
+        break_consistency_score = self._calculate_consistency_score(user)
+        
+        # Create or update optimization score
+        score, created = OptimizationScore.objects.get_or_create(
+            user=user,
+            score_date=date.today(),
+            defaults={
+                'break_timing_score': break_timing_score,
+                'break_frequency_score': break_frequency_score,
+                'break_consistency_score': break_consistency_score,
+                'recommendations': self._generate_recommendations(break_timing_score, break_frequency_score, break_consistency_score)
+            }
+        )
+        
+        if not created:
+            score.break_timing_score = break_timing_score
+            score.break_frequency_score = break_frequency_score
+            score.break_consistency_score = break_consistency_score
+            score.recommendations = self._generate_recommendations(break_timing_score, break_frequency_score, break_consistency_score)
+            score.save()
+        
+        # Calculate total score
+        total_score = score.calculate_total_score()
+        score.save()
+        
+        # Update user's last optimization score
+        user.last_optimization_score = total_score
+        user.save()
+        
+        serializer = self.get_serializer(score)
+        return Response(serializer.data)
+    
+    def _calculate_timing_score(self, user, pattern, preferences):
+        # Implementation of timing score calculation
+        pass
+    
+    def _calculate_frequency_score(self, user, preferences):
+        # Implementation of frequency score calculation
+        pass
+    
+    def _calculate_consistency_score(self, user):
+        # Implementation of consistency score calculation
+        pass
+    
+    def _generate_recommendations(self, timing_score, frequency_score, consistency_score):
+        # Generate personalized recommendations
+        recommendations = []
+        
+        if timing_score < 60:
+            recommendations.append("Try taking breaks at more optimal times during your work day")
+        
+        if frequency_score < 60:
+            recommendations.append("Consider increasing your break frequency to match your preferences")
+        
+        if consistency_score < 60:
+            recommendations.append("Work on maintaining a consistent break schedule")
+        
+        return recommendations

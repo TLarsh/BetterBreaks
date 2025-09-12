@@ -1,4 +1,5 @@
-from django.urls import path
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from .views import (
     RegisterView,
     LoginView,
@@ -6,8 +7,11 @@ from .views import (
     RequestOTPView,
     VerifyOTPView,
     ResetPasswordView,
+    ChangeEmailView,
+    ChangePasswordView,
     GoogleLoginView, FacebookLoginView, TwitterLoginView,
     DateListView,
+    SendMessageView,
     SpecialDateListCreateView,
     SpecialDateDetailView,
     BlackoutDatesView,
@@ -45,6 +49,22 @@ from .views import (
     EventListView,
     InitiatePaymentView,
     VerifyPaymentView,
+    # New APIView classes
+    BreakLogListCreateView,
+    BreakLogDetailView,
+    ScoreSummaryView,
+    StreakListCreateView,
+    StreakDetailView,
+    BadgeListCreateView,
+    BadgeDetailView,
+    BadgeEligibilityView,
+    OptimizationListCreateView,
+    OptimizationDetailView,
+    OptimizationCalculateView,
+
+
+    HolidayView, HolidayDetailView, UpcomingHolidaysView,
+    
 )
 from .social import AppleLoginView, TwitterLoginView, GoogleLoginView
 # from .payments import InitializePaymentView, VerifyPaymentView, PaystackWebhookView
@@ -78,7 +98,30 @@ from .swagger_api_fe import (
 )
 
 
+# Removed router as we're now using APIViews instead of ViewSets
+
 urlpatterns = [
+    # Break logs endpoints
+    path('api/breaks/logs/', BreakLogListCreateView.as_view(), name='break-logs-list'),
+    path('api/breaks/logs/<int:pk>/', BreakLogDetailView.as_view(), name='break-logs-detail'),
+    
+    # Score endpoints
+    path('api/score/summary/', ScoreSummaryView.as_view(), name='score-summary'),
+    
+    # Streak endpoints
+    path('api/streaks/', StreakListCreateView.as_view(), name='streaks-list'),
+    path('api/streaks/<int:pk>/', StreakDetailView.as_view(), name='streaks-detail'),
+    
+    # Badge endpoints
+    path('api/badges/', BadgeListCreateView.as_view(), name='badges-list'),
+    path('api/badges/<int:pk>/', BadgeDetailView.as_view(), name='badges-detail'),
+    # path('api/badges/check-eligibility/', BadgeEligibilityView.as_view(), name='badges-check-eligibility'),
+    
+    # Optimization endpoints
+    path('api/optimization/', OptimizationListCreateView.as_view(), name='optimization-list'),
+    path('api/optimization/<int:pk>/', OptimizationDetailView.as_view(), name='optimization-detail'),
+    # path('api/optimization/calculate/', OptimizationCalculateView.as_view(), name='optimization-calculate'),
+    
     path('api/swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('api/auth/register/', RegisterView.as_view(), name='register'),  # Ensure 'register' matches test
@@ -87,6 +130,13 @@ urlpatterns = [
     path('api/auth/request-reset/', RequestOTPView.as_view()),
     path('api/auth/verify-otp/', VerifyOTPView.as_view()),
     path('api/auth/reset-password/', ResetPasswordView.as_view()),
+    path("api/auth/change-email/", ChangeEmailView.as_view(), name="change-email"),
+    path("api/auth/change-password/", ChangePasswordView.as_view(), name="change-password"),
+    
+    # Holidays (APIViews replacing ViewSet)
+     path('api/holidays/', HolidayView.as_view(), name='holiday-list'),
+     path('api/holidays/<int:pk>/', HolidayDetailView.as_view(), name='holiday-detail'),
+     path('api/holidays/upcoming/', UpcomingHolidaysView.as_view(), name='upcoming-holidays'),
 
 
     # path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
@@ -97,8 +147,9 @@ urlpatterns = [
     path("api/auth/twitter/", TwitterLoginView.as_view(), name="twitter-login"),
     # path("api/auth/apple/", AppleLoginView.as_view(), name="apple-login"),
 
-    path('api/dates/', DateListView.as_view(), name='dates'),       # Ensure 'dates' matches test
-    path('api/blackout-dates/', BlackoutDatesView.as_view(), name='blackout_dates'),
+    path("api/message/send/", SendMessageView.as_view(), name="send-message"),
+
+    # path('api/blackout-dates/', BlackoutDatesView.as_view(), name='blackout_dates'),
     path('api/profile/get/', ProfileView.as_view(), name='profile'),
     # path('api/update-wellbeing/', UpdateWellbeingView.as_view(), name='update_wellbeing'),
     # path('api/log-action/', LogActionView.as_view(), name='log_action'),
@@ -112,7 +163,8 @@ urlpatterns = [
     # path("api/optimization-score/", OptimizationScoreView.as_view(), name="optimization-score"),
     # path("api/gamification-data/", GamificationDataView.as_view(), name="gamification-data"),
     # path("api/suggested-dates/", SuggestedDatesView.as_view(), name="suggested-dates"),
-    path("api/dates/add/", AddDateView.as_view(), name="add-date"),
+    # path('api/dates/', DateListView.as_view(), name='dates'),       # Ensure 'dates' matches test
+    # path("api/dates/add/", AddDateView.as_view(), name="add-date"),
 
     path("api/dates/special-dates/", SpecialDateListCreateView.as_view(), name="special-dates-list-create"),
     path("api/dates/special-dates/<uuid:pk>/", SpecialDateDetailView.as_view(), name="special-dates-detail"),
@@ -151,6 +203,11 @@ urlpatterns = [
     path("api/bookings/<int:booking_id>/payments/initiate/", InitiatePaymentView.as_view(), name="initiate-payment"),
     path("api/bookings/<int:booking_id>/payments/verify/", VerifyPaymentView.as_view(), name="verify-payment"),
     # path("api/payments/webhook/", PaystackWebhookView.as_view(), name="paystack-webhook"),
+
+
+
+
+    # path('api/', include(router.urls)),
 
 
 ]
