@@ -868,6 +868,105 @@ class UpdateProfileView(APIView):
                 "data": None,
                 "errors": serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
+        
+
+
+from django.utils import timezone
+from .tasks import sync_user_holidays
+from .utils import timezone_to_country_code  # <- new util
+
+class UpdateProfileView(APIView):
+    """Update user profile details."""
+
+    @swagger_auto_schema(request_body=UserSerializer)
+    def post(self, request):
+        if not request.user.is_authenticated:
+            return Response({
+                "message": "Unauthorized",
+                "status": False,
+                "data": None,
+                "errors": {"auth": "You must be logged in."}
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        user = request.user
+        data = request.data.copy()
+
+        # Convert and validate birthday
+        birthday_str = data.get("birthday")
+        if birthday_str:
+            try:
+                data["birthday"] = date_parser.isoparse(birthday_str)
+            except Exception:
+                return Response({
+                    "message": "Invalid date format for birthday",
+                    "status": False,
+                    "data": None,
+                    "errors": {"birthday": "Use ISO format e.g. 2025-07-23T05:36:26Z"}
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate password (if provided)
+        new_password = data.get("password")
+        if new_password:
+            try:
+                validate_password(new_password)
+                user.set_password(new_password)
+                user.save()
+            except (ValueError, DRFValidationError) as e:
+                return Response({
+                    "message": "Password validation failed",
+                    "status": False,
+                    "data": None,
+                    "errors": {"password": str(e)}
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        # --- Track if user updates country/timezone ---
+        old_timezone = user.home_location_timezone
+        old_coords = user.home_location_coordinates
+
+        # Validate other fields via serializer
+        serializer = UserSerializer(instance=user, data=data, partial=True)
+        if serializer.is_valid():
+            updated_user = serializer.save()
+
+            timezone_changed = old_timezone != updated_user.home_location_timezone
+            coords_changed = old_coords != updated_user.home_location_coordinates
+
+            if timezone_changed or coords_changed:
+                calendar = updated_user.holiday_calendar
+                if calendar:
+                    # Infer country code from timezone
+                    country_code = timezone_to_country_code(updated_user.home_location_timezone)
+                    calendar.country_code = country_code
+                    calendar.last_synced = timezone.now()
+                    calendar.save(update_fields=["country_code", "last_synced"])
+
+                    # Trigger Celery sync
+                    sync_user_holidays.delay(updated_user.id, calendar.country_code)
+
+            return Response({
+                "message": "Profile updated successfully",
+                "status": True,
+                "data": serializer.data,
+                "errors": None
+            }, status=status.HTTP_200_OK)
+
+        else:
+            return Response({
+                "message": "Validation failed",
+                "status": False,
+                "data": None,
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+
+
+
+
+
+
 
 # class UpdateSettingsView(APIView):
 #     """Update user settings JSON."""
@@ -1760,8 +1859,9 @@ class MoodHistoryView(APIView):
             "data": serializer.data,
             "errors": None
         }, status=status.HTTP_200_OK)
+    
 
-
+######## FIRST LOGIN SETUP(ONBOARDING) ################
 
 @first_login_setup_docs
 class FirstLoginSetupView(APIView):
@@ -2341,101 +2441,149 @@ class VerifyPaymentView(APIView):
 #################### Hokidays and gamifications #################
 ####################################################################
 
-class HolidayView(APIView):
-    permission_classes = [IsAuthenticated]
-    @swagger_auto_schema(
-        operation_summary="Get all holidays",
-        operation_description="Retrieve all public holidays for the logged-in user's holiday calendar.",
-        responses={200: PublicHolidaySerializer(many=True)},
-    )
+# class HolidayView(APIView):
+#     permission_classes = [IsAuthenticated]
+#     @swagger_auto_schema(
+#         operation_summary="Get all holidays",
+#         operation_description="Retrieve all public holidays for the logged-in user's holiday calendar.",
+#         responses={200: PublicHolidaySerializer(many=True)},
+#     )
     
-    def get(self, request):
-        """Get all holidays for the user's calendar"""
-        user = request.user
-        calendar = user.holiday_calendar
-        if not calendar:
-            return Response({"error": "No holiday calendar set up"}, status=400)
+#     def get(self, request):
+#         """Get all holidays for the user's calendar"""
+#         user = request.user
+#         calendar = user.holiday_calendar
+#         if not calendar:
+#             return Response({"error": "No holiday calendar set up"}, status=400)
             
-        holidays = PublicHoliday.objects.filter(calendar=calendar)
-        serializer = PublicHolidaySerializer(holidays, many=True)
-        return Response(serializer.data)
+#         holidays = PublicHoliday.objects.filter(calendar=calendar)
+#         serializer = PublicHolidaySerializer(holidays, many=True)
+#         return Response(serializer.data)
     
-    def post(self, request):
-        """Create a new holiday"""
-        user = request.user
-        calendar = user.holiday_calendar
-        if not calendar:
-            return Response({"error": "No holiday calendar set up"}, status=400)
+#     def post(self, request):
+#         """Create a new holiday"""
+#         user = request.user
+#         calendar = user.holiday_calendar
+#         if not calendar:
+#             return Response({"error": "No holiday calendar set up"}, status=400)
             
-        serializer = PublicHolidaySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(calendar=calendar)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#         serializer = PublicHolidaySerializer(data=request.data)
+#         if serializer.is_valid():
+#             serializer.save(calendar=calendar)
+#             return Response(serializer.data, status=status.HTTP_201_CREATED)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class HolidayDetailView(APIView):
+# class HolidayDetailView(APIView):
+#     permission_classes = [IsAuthenticated]
+    
+#     def get_object(self, pk, user):
+#         try:
+#             calendar = user.holiday_calendar
+#             if not calendar:
+#                 return None
+#             return PublicHoliday.objects.get(pk=pk, calendar=calendar)
+#         except PublicHoliday.DoesNotExist:
+#             return None
+    
+#     @holiday_detail_get
+#     def get(self, request, pk):
+#         """Get a specific holiday"""
+#         holiday = self.get_object(pk, request.user)
+#         if not holiday:
+#             return Response({"error": "Holiday not found"}, status=404)
+#         serializer = PublicHolidaySerializer(holiday)
+#         return Response(serializer.data)
+    
+#     @holiday_detail_put
+#     def put(self, request, pk):
+#         """Update a specific holiday"""
+#         holiday = self.get_object(pk, request.user)
+#         if not holiday:
+#             return Response({"error": "Holiday not found"}, status=404)
+#         serializer = PublicHolidaySerializer(holiday, data=request.data)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response(serializer.data)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+#     @holiday_detail_delete
+#     def delete(self, request, pk):
+#         """Delete a specific holiday"""
+#         holiday = self.get_object(pk, request.user)
+#         if not holiday:
+#             return Response({"error": "Holiday not found"}, status=404)
+#         holiday.delete()
+#         return Response(status=status.HTTP_204_NO_CONTENT)
+
+# class UpcomingHolidaysView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     @upcoming_holidays_get
+#     def get(self, request):
+#         """Get upcoming holidays for the user's country"""
+#         user = request.user
+#         calendar = user.holiday_calendar
+#         if not calendar:
+#             return Response({"error": "No holiday calendar set up"}, status=400)
+            
+#         today = date.today()
+#         upcoming = PublicHoliday.objects.filter(
+#             calendar=calendar,
+#             date__gte=today
+#         ).order_by('date')[:10]
+        
+#         serializer = PublicHolidaySerializer(upcoming, many=True)
+#         return Response(serializer.data)
+
+class HolidayView(APIView):
+    """
+    Get all holidays for the logged-in user (current + next year).
+    """
     permission_classes = [IsAuthenticated]
-    
-    def get_object(self, pk, user):
-        try:
-            calendar = user.holiday_calendar
-            if not calendar:
-                return None
-            return PublicHoliday.objects.get(pk=pk, calendar=calendar)
-        except PublicHoliday.DoesNotExist:
-            return None
-    
-    @holiday_detail_get
-    def get(self, request, pk):
-        """Get a specific holiday"""
-        holiday = self.get_object(pk, request.user)
-        if not holiday:
-            return Response({"error": "Holiday not found"}, status=404)
-        serializer = PublicHolidaySerializer(holiday)
-        return Response(serializer.data)
-    
-    @holiday_detail_put
-    def put(self, request, pk):
-        """Update a specific holiday"""
-        holiday = self.get_object(pk, request.user)
-        if not holiday:
-            return Response({"error": "Holiday not found"}, status=404)
-        serializer = PublicHolidaySerializer(holiday, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    @holiday_detail_delete
-    def delete(self, request, pk):
-        """Delete a specific holiday"""
-        holiday = self.get_object(pk, request.user)
-        if not holiday:
-            return Response({"error": "Holiday not found"}, status=404)
-        holiday.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def get(self, request):
+        user = request.user
+        calendar = getattr(user, "holiday_calendar", None)
+
+        if not calendar or not calendar.is_enabled:
+            return error_response(
+                message =  "No holiday calendar found",
+                errors=  {"calendar": "No holiday calendar found"}
+            )
+
+        holidays = calendar.holidays.all().order_by("date")
+        serializer = PublicHolidaySerializer(holidays, many=True)
+
+        return success_response(
+            message =  "Fetched holidays successfully",
+            data=serializer.data
+        )
+
 
 class UpcomingHolidaysView(APIView):
+    """
+    Get upcoming holidays for the logged-in user (today + future dates).
+    """
     permission_classes = [IsAuthenticated]
 
-    @upcoming_holidays_get
     def get(self, request):
-        """Get upcoming holidays for the user's country"""
         user = request.user
-        calendar = user.holiday_calendar
-        if not calendar:
-            return Response({"error": "No holiday calendar set up"}, status=400)
-            
-        today = date.today()
-        upcoming = PublicHoliday.objects.filter(
-            calendar=calendar,
-            date__gte=today
-        ).order_by('date')[:10]
-        
-        serializer = PublicHolidaySerializer(upcoming, many=True)
-        return Response(serializer.data)
+        calendar = getattr(user, "holiday_calendar", None)
 
+        if not calendar or not calendar.is_enabled:
+            return error_response(
+                message =  "No holiday calendar found",
+                errors=  {"calendar": "No holiday calendar found"}
+            )
 
+        today = now().date()
+        holidays = calendar.holidays.filter(date__gte=today).order_by("date")
+        serializer = PublicHolidaySerializer(holidays, many=True)
+
+        return success_response(
+            message =  "Fetched upcoming holidays successfully",
+            data=serializer.data
+        )
 
 # LOGGING ENDPOINTS ###############################
 

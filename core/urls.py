@@ -63,7 +63,9 @@ from .views import (
     OptimizationCalculateView,
 
 
-    HolidayView, HolidayDetailView, UpcomingHolidaysView,
+    HolidayView, 
+    # HolidayDetailView, 
+    UpcomingHolidaysView,
     
 )
 from .social import AppleLoginView, TwitterLoginView, GoogleLoginView
@@ -135,7 +137,7 @@ urlpatterns = [
     
     # Holidays (APIViews replacing ViewSet)
      path('api/holidays/', HolidayView.as_view(), name='holiday-list'),
-     path('api/holidays/<int:pk>/', HolidayDetailView.as_view(), name='holiday-detail'),
+    #  path('api/holidays/<int:pk>/', HolidayDetailView.as_view(), name='holiday-detail'),
      path('api/holidays/upcoming/', UpcomingHolidaysView.as_view(), name='upcoming-holidays'),
 
 

@@ -35,8 +35,8 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-# ALLOWED_HOSTS = ['lifestyle-backend-4klf.onrender.com', 'localhost', '127.0.0.1']
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
+ALLOWED_HOSTS = ['lifestyle-backend-4klf.onrender.com', 'localhost', '127.0.0.1']
+# ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 
 CORS_ALLOW_ALL_ORIGINS = True  # or define allowed origins specifically
 # Example: CORS_ALLOWED_ORIGINS = ['https://yourmobileapp.com']
@@ -296,7 +296,7 @@ SWAGGER_SETTINGS = {
     }
 }
 
-
+####### EMAIL CONFIGURATION ######
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", 465))
 EMAIL_USER = os.getenv("EMAIL_HOST_USER")
@@ -304,5 +304,14 @@ EMAIL_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "True") == "True"
 Email_USE_TLS=False
 EMAIL_TIMEOUT = 30
+
+
+#### CELERY CONFIGURATION ####
+CELERY_BROKER_URL = "redis://127.0.0.1:6379/0"
+CELERY_RESULT_BACKEND = "redis://127.0.0.1:6379/0"
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
 
 RENDER = os.getenv("RENDER", "False") == "True"
