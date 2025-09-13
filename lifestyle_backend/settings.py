@@ -302,7 +302,7 @@ EMAIL_PORT = int(os.getenv("EMAIL_PORT", 465))
 EMAIL_USER = os.getenv("EMAIL_HOST_USER")
 EMAIL_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
 EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "True") == "True"
-Email_USE_TLS=False
+EMAIL_USE_TLS=False
 EMAIL_TIMEOUT = 30
 
 
