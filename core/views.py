@@ -556,19 +556,10 @@ class BookEventView(APIView):
 #         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-############### SPECIAL DATE VIEWS #####################
-######################################################## 
-class BlackoutDatesView(APIView):
-    """Retrieve authenticated user's blackout dates."""
-    def get(self, request):
-        if not request.user.is_authenticated:
-            return Response(
-                {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
-            )
-        blackout_dates = BlackoutDate.objects.filter(user=request.user)
-        serializer = BlackoutDateSerializer(blackout_dates, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+############### USER PROFILE VIEWS #####################
+######################################################## 
 class ProfileView(APIView):
     """Retrieve user profile details."""
     
@@ -581,6 +572,8 @@ class ProfileView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+############### SPECIAL DATE VIEWS #####################
+######################################################## 
 class SpecialDateListCreateView(APIView):
     """
     List all special dates or create a new one.
@@ -1265,18 +1258,34 @@ class DeleteDateView(APIView):
 #         serializer = WellbeingQuestionSerializer(questions, many=True)
 #         return Response(serializer.data, status=status.HTTP_200_OK)
     
+
+    ############### BLACKOUT DATE VIEWS #####################
+######################################################## 
+class BlackoutDatesView(APIView):
+    """Retrieve authenticated user's blackout dates."""
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED
+            )
+        blackout_dates = BlackoutDate.objects.filter(user=request.user)
+        serializer = BlackoutDateSerializer(blackout_dates, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
 # --------------BLACKOUT DATES ------------------
 class AddBlackoutDateView(APIView):
+    @swagger_auto_schema(request_body=BlackOutDateSerializer)
     def post(self, request):
         if not request.user.is_authenticated:
             return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
 
-        serializer = BlackoutDateSerializer(data=request.data)
+        serializer = BlackOutDateSerializer(data=request.data)
         if serializer.is_valid():
             blackout_date = serializer.save(user=request.user)
             return Response({"uuid": blackout_date.id}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+#------------DELETE BLACKOUT DATES-------------------
 class DeleteBlackoutDateView(APIView):
     def delete(self, request, blackout_uuid):
         if not request.user.is_authenticated:

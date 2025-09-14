@@ -149,7 +149,7 @@ class PasswordResetOTP(models.Model):
     def is_expired(self):
         return timezone.now() > self.created_at + timezone.timedelta(minutes=10)
 
-# Contact Messages Table
+####### Contact Messages Table #######################
 
 class ContactMessage(models.Model):
     full_name = models.CharField(max_length=150)
@@ -277,7 +277,7 @@ class PublicHoliday(models.Model):
         return f"{self.name} ({self.date})"
     
 
-# Break Score Models
+############# Break Score Models #######################
 class BreakScore(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='break_scores')
     score_date = models.DateField()
@@ -306,6 +306,8 @@ class BreakScore(models.Model):
         self.score_value = self.frequency_points + self.adherence_points + self.wellbeing_impact
         return self.score_value
 
+
+########## STREAK SCORE MODELS #############################
 class StreakScore(models.Model):
     STREAK_PERIOD_CHOICES = [
         ('weekly', 'Weekly'),
@@ -373,6 +375,7 @@ class StreakScore(models.Model):
             
         return False
 
+######## Badge Models #############################
 class Badge(models.Model):
     BADGE_TYPES = [
         ('weekend_breaker', 'Weekend Breaker'),  # Taking breaks every weekend for a month
@@ -408,6 +411,8 @@ class Badge(models.Model):
     def __str__(self):
         return f"{self.user.email}'s {self.get_level_display()} {self.get_badge_type_display()} Badge"
 
+
+########## Optimization Score Models #############################
 class OptimizationScore(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='optimization_scores')
     score_date = models.DateField()
@@ -492,7 +497,7 @@ class OptimizationScore(models.Model):
 #     def __str__(self):
 #         return f"{self.user.full_name if self.user.full_name else self.user.email} - {self.anual_leave_balance} days left"
 
-
+############ Break Plan Models #############################
 class BreakPlan(models.Model):
     BREAK_TYPES = [
         ('vacation', 'Vacation'),
@@ -698,7 +703,7 @@ class BreakPlan(models.Model):
         )
 
 # ----------------------------------------
-
+######### Leave Balance Models #############################
 class LeaveBalance(models.Model):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -806,7 +811,7 @@ class OptimizationGoal(models.Model):
     def __str__(self):
         return f"{self.user.full_name if self.user.full_name else self.user.email} - {self.get_preference_display()}"
 
-
+######## BREAK PREFERENCES #############################
 class BreakPreferences(models.Model):
     PREFERENCES = [
         ('long_weekends', 'Long Weekends'),
@@ -832,8 +837,7 @@ class BreakPreferences(models.Model):
         return f"{self.user} - {self.get_preference_display()}"
     
 
-
-
+####### MOOD TRACKER #################################
 class Mood(models.Model):
     MOOD_CHOICES = [
         ("happy", "Happy"),

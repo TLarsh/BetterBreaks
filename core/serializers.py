@@ -587,7 +587,7 @@ class NotificationPreferenceSerializer(serializers.ModelSerializer):
             'emailEnabled'
         ]
 
-# ======= USER-NOTIFICATION-SERILIZER ========
+# ======= WORKING PATTTERN-SERILIZER ========
 class WorkingPatternSerializer(serializers.ModelSerializer):
     class Meta:
         model = WorkingPattern
