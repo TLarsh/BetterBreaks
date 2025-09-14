@@ -69,6 +69,19 @@ class User(AbstractBaseUser, PermissionsMixin):
             'access': str(refresh.access_token)
         }
 
+    def get_calendar(self):
+        """
+        Always return a holiday calendar for this user.
+        If missing, create one with a default country code.
+        """
+        from .models import PublicHolidayCalendar  # local import to avoid circulars
+
+        calendar, _ = PublicHolidayCalendar.objects.get_or_create(
+            user=self,
+            defaults={"country_code": "US"}  # ✅ can be replaced with logic from timezone
+        )
+        return calendar
+
 class SocialAccount(models.Model):
     PROVIDER_CHOICES = [
         ("google", "Google"),

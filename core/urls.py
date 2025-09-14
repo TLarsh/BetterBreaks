@@ -172,7 +172,8 @@ urlpatterns = [
     path("api/dates/special-dates/<uuid:pk>/", SpecialDateDetailView.as_view(), name="special-dates-detail"),
     path("api/dates/blackout-dates-add/", AddBlackoutDateView.as_view(),name="add-blackout-date"),
     path("api/dates/blackout-dates/", BlackoutDatesView.as_view(),name="blackout-dates"),
-    path("api/dates/blackout-date-delete/<uuid:pk>/", DeleteBlackoutDateView.as_view(),name="delete-blackout-date"),
+    path("api/dates/blackout-date-delete/<uuid:blackout_uuid>/", DeleteBlackoutDateView.as_view(),name="delete-blackout-date"),
+    
 
 
 

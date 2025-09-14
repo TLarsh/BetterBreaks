@@ -15,6 +15,8 @@ from .models import (
     BreakPlan,
     LeaveBalance,
     BreakPreferences,
+    PublicHoliday,
+    PublicHolidayCalendar,
 )
 
 # Custom Admin Configuration for User Model
@@ -231,6 +233,26 @@ class BreakPreferencesAdmin(admin.ModelAdmin):
         }),
     )
 
+@admin.register(PublicHoliday)
+class PublicHolidayAdmin(admin.ModelAdmin):
+    list_display = ("name", "date", "country_code", "calendar")
+    list_filter = ("country_code", "date")
+    search_fields = ("name", "calendar__user__email")
+    ordering = ("-date",)
+    date_hierarchy = "date"
+    autocomplete_fields = ("calendar",)
+
+
+@admin.register(PublicHolidayCalendar)
+class PublicHolidayCalendarAdmin(admin.ModelAdmin):
+    list_display = ("user", "country_code", "is_enabled", "last_synced")
+    list_filter = ("is_enabled", "country_code")
+    search_fields = ("user__email", "country_code")
+    ordering = ("user__email",)
+    autocomplete_fields = ("user",)
+    readonly_fields = ("last_synced",)
+
+
 # Register all models with custom configurations
 admin.site.register(User, UserAdmin)
 admin.site.register(Client, ClientAdmin)
@@ -242,3 +264,5 @@ admin.site.register(ActionData, ActionDataAdmin)
 # admin.site.register(OnboardingData, OnboardingDataAdmin)
 admin.site.register(UserSettings, UserSettingsAdmin)
 # admin.site.register(UserNotificationPreference, UserNotificationPreferenceAdmin)
+# admin.site.register(PublicHoliday, PublicHolidayAdmin)
+# admin.site.register(PublicHolidayCalendar, PublicHolidayCalendarAdmin)

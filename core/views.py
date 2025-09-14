@@ -86,6 +86,7 @@ from .models import (
     SpecialDate,
     # GamificationData,
     PublicHoliday,
+    PublicHolidayCalendar,
     # OnboardingData,
     # GamificationData,
     # WellbeingScore,
@@ -113,6 +114,7 @@ from .swagger_api_fe import (
     initiate_payment_docs,
     verify_payment_docs,
     holiday_detail_get,
+    holiday_detail_post,
     holiday_detail_put,
     holiday_detail_delete,
     upcoming_holidays_get,
@@ -799,68 +801,69 @@ class SpecialDateDetailView(APIView):
 #         return Response({"success": True}, status=status.HTTP_200_OK)
 
 
+########### UPDATE USER PROFILE ##################
+############                    #################
+# class UpdateProfileView(APIView):
+#     """Update user profile details."""
 
-class UpdateProfileView(APIView):
-    """Update user profile details."""
+#     @swagger_auto_schema(request_body=UserSerializer)
+#     def post(self, request):
+#         if not request.user.is_authenticated:
+#             return Response({
+#                 "message": "Unauthorized",
+#                 "status": False,
+#                 "data": None,
+#                 "errors": {"auth": "You must be logged in."}
+#             }, status=status.HTTP_401_UNAUTHORIZED)
 
-    @swagger_auto_schema(request_body=UserSerializer)
-    def post(self, request):
-        if not request.user.is_authenticated:
-            return Response({
-                "message": "Unauthorized",
-                "status": False,
-                "data": None,
-                "errors": {"auth": "You must be logged in."}
-            }, status=status.HTTP_401_UNAUTHORIZED)
+#         user = request.user
+#         data = request.data.copy()
 
-        user = request.user
-        data = request.data.copy()
+#         # Convert and validate birthday
+#         birthday_str = data.get("birthday")
+#         if birthday_str:
+#             try:
+#                 data["birthday"] = date_parser.isoparse(birthday_str)
+#             except Exception:
+#                 return Response({
+#                     "message": "Invalid date format for birthday",
+#                     "status": False,
+#                     "data": None,
+#                     "errors": {"birthday": "Use ISO format e.g. 2025-07-23T05:36:26Z"}
+#                 }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Convert and validate birthday
-        birthday_str = data.get("birthday")
-        if birthday_str:
-            try:
-                data["birthday"] = date_parser.isoparse(birthday_str)
-            except Exception:
-                return Response({
-                    "message": "Invalid date format for birthday",
-                    "status": False,
-                    "data": None,
-                    "errors": {"birthday": "Use ISO format e.g. 2025-07-23T05:36:26Z"}
-                }, status=status.HTTP_400_BAD_REQUEST)
+#         # Validate password (if provided)
+#         new_password = data.get("password")
+#         if new_password:
+#             try:
+#                 validate_password(new_password)
+#                 user.set_password(new_password)
+#                 user.save()
+#             except (ValueError, DRFValidationError) as e:
+#                 return Response({
+#                     "message": "Password validation failed",
+#                     "status": False,
+#                     "data": None,
+#                     "errors": {"password": str(e)}
+#                 }, status=status.HTTP_400_BAD_REQUEST)
 
-        # Validate password (if provided)
-        new_password = data.get("password")
-        if new_password:
-            try:
-                validate_password(new_password)
-                user.set_password(new_password)
-                user.save()
-            except (ValueError, DRFValidationError) as e:
-                return Response({
-                    "message": "Password validation failed",
-                    "status": False,
-                    "data": None,
-                    "errors": {"password": str(e)}
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-        # Validate other fields via serializer
-        serializer = UserSerializer(instance=user, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({
-                "message": "Profile updated successfully",
-                "status": True,
-                "data": serializer.data,
-                "errors": None
-            }, status=status.HTTP_200_OK)
-        else:
-            return Response({
-                "message": "Validation failed",
-                "status": False,
-                "data": None,
-                "errors": serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
+#         # Validate other fields via serializer
+#         serializer = UserSerializer(instance=user, data=data, partial=True)
+#         if serializer.is_valid():
+#             serializer.save()
+#             return Response({
+#                 "message": "Profile updated successfully",
+#                 "status": True,
+#                 "data": serializer.data,
+#                 "errors": None
+#             }, status=status.HTTP_200_OK)
+#         else:
+#             return Response({
+#                 "message": "Validation failed",
+#                 "status": False,
+#                 "data": None,
+#                 "errors": serializer.errors
+#             }, status=status.HTTP_400_BAD_REQUEST)
         
 
 
@@ -1277,13 +1280,20 @@ class AddBlackoutDateView(APIView):
     @swagger_auto_schema(request_body=BlackOutDateSerializer)
     def post(self, request):
         if not request.user.is_authenticated:
-            return Response({"error": "Unauthorized"}, status=status.HTTP_401_UNAUTHORIZED)
+            return error_response(message="An error occured ", errors= "Unauthorized user", status_code=status.HTTP_401_UNAUTHORIZED)
 
         serializer = BlackOutDateSerializer(data=request.data)
         if serializer.is_valid():
             blackout_date = serializer.save(user=request.user)
-            return Response({"uuid": blackout_date.id}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return success_response(
+                message="Blackout date added succesfully",
+                data=serializer.data,
+                status_code=status.HTTP_201_CREATED
+            )
+        return error_response(
+            message="An error occured",
+            errors=serializer.errors,
+        )
 
 #------------DELETE BLACKOUT DATES-------------------
 class DeleteBlackoutDateView(APIView):
@@ -1294,9 +1304,9 @@ class DeleteBlackoutDateView(APIView):
         try:
             blackout_date = BlackoutDate.objects.get(id=blackout_uuid, user=request.user)
             blackout_date.delete()
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return success_response(message="Blackout date successfully deleted",status_code=status.HTTP_204_NO_CONTENT)
         except BlackoutDate.DoesNotExist:
-            return Response({"error": "Blackout date not found"}, status=status.HTTP_404_NOT_FOUND)
+            return error_response(message="Blackout date not found", status_code=status.HTTP_404_NOT_FOUND)
 
 
 # --------------CREATE BREAK PLAN------------------
@@ -2547,25 +2557,63 @@ class VerifyPaymentView(APIView):
 class HolidayView(APIView):
     """
     Get all holidays for the logged-in user (current + next year).
+    Update user's holiday calendar country code.
     """
     permission_classes = [IsAuthenticated]
 
+    @holiday_detail_get
     def get(self, request):
         user = request.user
         calendar = getattr(user, "holiday_calendar", None)
 
         if not calendar or not calendar.is_enabled:
             return error_response(
-                message =  "No holiday calendar found",
-                errors=  {"calendar": "No holiday calendar found"}
+                message="No holiday calendar found",
+                errors={"calendar": "No holiday calendar found"}
             )
 
         holidays = calendar.holidays.all().order_by("date")
         serializer = PublicHolidaySerializer(holidays, many=True)
 
         return success_response(
-            message =  "Fetched holidays successfully",
+            message="Fetched holidays successfully",
             data=serializer.data
+        )
+
+    @holiday_detail_post
+    def post(self, request):
+        """
+        Update the user's holiday calendar country code and sync holidays.
+        """
+        user = request.user
+        country_code = request.data.get("country_code")
+
+        if not country_code:
+            return error_response(
+                message="Country code is required",
+                errors={"country_code": "This field is required"},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+    
+        calendar = user.get_calendar()
+
+        # Update country code + enable calendar
+        calendar.country_code = country_code
+        calendar.is_enabled = True
+        calendar.save(update_fields=["country_code", "is_enabled", "updated_at"])
+
+        # Queue the sync task
+        from .tasks import sync_user_holidays
+        task = sync_user_holidays.delay(user.id, country_code)
+
+        return success_response(
+            message="Holiday calendar updated successfully",
+            data={
+                "country_code": country_code,
+                "task_id": task.id,
+            },
+            status_code=status.HTTP_200_OK
         )
 
 
@@ -2587,6 +2635,7 @@ class UpcomingHolidaysView(APIView):
 
         today = now().date()
         holidays = calendar.holidays.filter(date__gte=today).order_by("date")
+        print("DEBUG Holidays:", holidays) 
         serializer = PublicHolidaySerializer(holidays, many=True)
 
         return success_response(

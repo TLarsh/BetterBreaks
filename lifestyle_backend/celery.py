@@ -11,7 +11,7 @@ app.autodiscover_tasks()
 # Celery Beat schedule
 app.conf.beat_schedule = {
     "refresh-holidays-every-month": {
-        "task": "holidays.tasks.refresh_all_user_holidays",
+        "task": "core.tasks.refresh_all_user_holidays",
         "schedule": crontab(day_of_month=1, hour=0, minute=0),  # every 1st day of month
     },
 }
