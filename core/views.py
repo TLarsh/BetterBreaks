@@ -207,12 +207,12 @@ class RegisterView(APIView):
                 status_code=status.HTTP_201_CREATED
             )
 
-        # except DRFValidationError as ve:
-        #     return error_response(
-        #         message="Registration failed",
-        #         errors=ve.detail if hasattr(ve, "detail") else str(ve),
-        #         status_code=status.HTTP_400_BAD_REQUEST
-            # )
+        except DRFValidationError as ve:
+            return error_response(
+                message="Registration failed",
+                errors=ve.detail if hasattr(ve, "detail") else str(ve),
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
             
         except ValueError as ve:
             return error_response(
@@ -225,7 +225,7 @@ class RegisterView(APIView):
             return error_response(
                 message="An unexpected error occurred during registration",
                 errors={"detail": str(e)},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_400_BAD_REQUEST
             )
 
 class LoginView(APIView):
@@ -325,7 +325,7 @@ class LogoutView(APIView):
             return error_response(
                 message="Server error",
                 errors={"non_field_errors": ["An unexpected error occurred"]},
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+                status_code=status.HTTP_400_BAD_REQUEST
             )        
 
 
@@ -1346,7 +1346,7 @@ class UpcomingBreaksView(APIView):
     def get(self, request):
         user = request.user
         today = now().date()
-    
+
         breaks = (
             BreakPlan.objects.filter(
                 user=user,
@@ -1354,13 +1354,13 @@ class UpcomingBreaksView(APIView):
                 status="approved"   # only approved breaks
             ).order_by("startDate")
         )
-    
+
         if not breaks.exists():
             return success_response(
                 message="No upcoming approved breaks found",
                 data=[]
             )
-    
+
         serializer = BreakPlanSerializer(breaks, many=True)
         return success_response(
             message="Fetched upcoming approved breaks successfully",

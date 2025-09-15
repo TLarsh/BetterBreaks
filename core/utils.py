@@ -13,6 +13,7 @@ from geopy.geocoders import Nominatim
 # from .models import WellbeingScore, DateEntry, GamificationData
 import random
 from rest_framework.response import Response
+from rest_framework.exceptions import ErrorDetail
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
@@ -309,13 +310,24 @@ def send_otp_email(email, otp):
 
 
 
+
 def normalize(value):
     """
-    Normalize empty values to None
+    Recursively normalize DRF errors into plain JSON-serializable values.
+    - Converts ErrorDetail to string
+    - Handles dicts and lists
+    - Normalizes empty values to None
     """
-    if value in [None, {}, [], ""]:
+    if isinstance(value, dict):
+        return {k: normalize(v) for k, v in value.items()} or None
+    elif isinstance(value, list):
+        return [normalize(v) for v in value] or None
+    elif isinstance(value, ErrorDetail):
+        return str(value)
+    elif value in [None, {}, [], ""]:
         return None
     return value
+
 
 def success_response(message="", data=None, status_code=200):
     return Response({
