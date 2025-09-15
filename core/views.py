@@ -47,6 +47,7 @@ from .serializers import (
     # GamificationDataSerializer,
     # _____BreakSerializer_______
     BreakPlanSerializer,
+    UpcomingBreakPlanSerializer,
     BreakPlanListSerializer,
     BreakPlanUpdateSerializer,
     LeaveBalanceSerializer, BreakPreferencesSerializer, BreakPlanSerializer,
@@ -1334,6 +1335,38 @@ class CreateBreakPlanView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
+class UpcomingBreaksView(APIView):
+    """
+    Get upcoming breaks for the logged-in user,
+    respecting user's home_location_timezone.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        today = now().date()
+    
+        breaks = (
+            BreakPlan.objects.filter(
+                user=user,
+                startDate__date__gte=today,
+                status="approved"   # only approved breaks
+            ).order_by("startDate")
+        )
+    
+        if not breaks.exists():
+            return success_response(
+                message="No upcoming approved breaks found",
+                data=[]
+            )
+    
+        serializer = BreakPlanSerializer(breaks, many=True)
+        return success_response(
+            message="Fetched upcoming approved breaks successfully",
+            data=serializer.data
+        )
+
 
 class ListUserBreakPlansView(APIView):
     permission_classes = [IsAuthenticated]
@@ -1723,7 +1756,7 @@ class NotificationPreferenceView(APIView):
 
 
 
-
+###### SCHEDULE #####################################
 class ScheduleView(APIView):
     """
     Combined view to GET or POST WorkingPattern, BlackoutDates, and OptimizationGoals
@@ -1829,8 +1862,7 @@ class ScheduleView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-
-
+######### MOOD CHECKIN ############
 class MoodCheckInView(APIView):
     permission_classes = [IsAuthenticated]
     @mood_checkin_schema
@@ -2625,21 +2657,20 @@ class UpcomingHolidaysView(APIView):
 
     def get(self, request):
         user = request.user
-        calendar = getattr(user, "holiday_calendar", None)
+        calendar = user.get_calendar()
 
-        if not calendar or not calendar.is_enabled:
+        if not calendar.is_enabled:
             return error_response(
-                message =  "No holiday calendar found",
-                errors=  {"calendar": "No holiday calendar found"}
+                message="Holiday calendar is disabled",
+                errors={"calendar": "Holiday calendar is disabled"}
             )
 
         today = now().date()
         holidays = calendar.holidays.filter(date__gte=today).order_by("date")
-        print("DEBUG Holidays:", holidays) 
         serializer = PublicHolidaySerializer(holidays, many=True)
 
         return success_response(
-            message =  "Fetched upcoming holidays successfully",
+            message="Fetched upcoming holidays successfully",
             data=serializer.data
         )
 

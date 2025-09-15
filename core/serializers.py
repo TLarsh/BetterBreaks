@@ -2,6 +2,8 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from django.contrib.auth import authenticate
 from django.utils import timezone
+from django.utils.timesince import timesince
+from django.utils.timezone import now
 from .models import (User, Client, DateEntry, BreakPlan, LeaveBalance, BreakPreferences, 
 BreakPlan, LastLogin, UserSettings,
 PublicHoliday, PasswordResetOTP, WorkingPattern, 
@@ -428,6 +430,7 @@ class BreakPlanSerializer(serializers.ModelSerializer):
 
         # -----------------
 
+
 # ==========BREAK LIST SERIALIZERS===============
 class BreakPlanListSerializer(serializers.ModelSerializer):
     daysCount = serializers.SerializerMethodField()
@@ -455,6 +458,48 @@ class BreakPlanListSerializer(serializers.ModelSerializer):
 
 
 # ------------------
+
+class UpcomingBreakPlanSerializer(serializers.ModelSerializer):
+    days = serializers.SerializerMethodField()
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    starts_in = serializers.SerializerMethodField()
+    local_start_date = serializers.SerializerMethodField()
+
+    class Meta:
+        model = BreakPlan
+        fields = [
+            "id",
+            "description",
+            "type",
+            "status",
+            "status_display",
+            "startDate",
+            "endDate",
+            "days",
+            "starts_in",
+            "local_start_date",
+        ]
+
+    def get_days(self, obj):
+        return (obj.endDate.date() - obj.startDate.date()).days + 1
+
+    def get_starts_in(self, obj):
+        today = now().date()
+        diff = (obj.startDate.date() - today).days
+        return f"In {diff} days" if diff >= 0 else "Started already"
+
+    def get_local_start_date(self, obj):
+        user = obj.user
+        if not user.home_location_timezone:
+            return obj.startDate.date()
+
+        try:
+            tz = pytz.timezone(user.home_location_timezone)
+            local_dt = obj.startDate.astimezone(tz)
+            return local_dt.strftime("%B %d")  # Example: "April 24"
+        except Exception:
+            return obj.startDate.date()
+
 
 # ==========BREAK PLAN UPDATE SERIALIZERS===============
 class BreakPlanUpdateSerializer(serializers.ModelSerializer):

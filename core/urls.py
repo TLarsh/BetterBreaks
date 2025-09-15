@@ -34,6 +34,7 @@ from .views import (
     AddBlackoutDateView,
     DeleteBlackoutDateView,
     CreateBreakPlanView,
+    UpcomingBreaksView,
     ListUserBreakPlansView,
     UpdateBreakPlanView,
     DeleteBreakPlanView,
@@ -178,6 +179,7 @@ urlpatterns = [
 
 
     path("api/breaks/plan", CreateBreakPlanView.as_view(), name="create-break-plan"),
+    path("api/breaks/upcoming", UpcomingBreaksView.as_view(), name="create-break-plan"),
     path("api/breaks/plans", ListUserBreakPlansView.as_view(), name="list-break-plans"),
     path("api/breaks/plans/<uuid:planId>", UpdateBreakPlanView.as_view(), name="update-break-plan"),
     path("api/breaks/plan/<uuid:planId>", DeleteBreakPlanView.as_view(), name="delete-break-plan"),
