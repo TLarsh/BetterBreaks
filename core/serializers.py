@@ -4,7 +4,7 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from django.utils.timesince import timesince
 from django.utils.timezone import now
-from .models import (User, Client, DateEntry, BreakPlan, LeaveBalance, BreakPreferences, 
+from .models import (User, Client, DateEntry, BreakPlan, BreakSuggestion, LeaveBalance, BreakPreferences, 
 BreakPlan, LastLogin, UserSettings,
 PublicHoliday, PasswordResetOTP, WorkingPattern, 
 OptimizationGoal, UserNotificationPreference, Mood,
@@ -501,6 +501,15 @@ class UpcomingBreakPlanSerializer(serializers.ModelSerializer):
             return obj.startDate.date()
 
 
+# ==========BREAK SUGGESTION SERIALIZERS===============
+class BreakSuggestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BreakSuggestion
+        fields = ['id', 'title', 'description', 'start_date', 'end_date', 'reason', 'priority',
+                 'is_accepted', 'based_on_mood', 'based_on_workload', 'based_on_preferences',
+                 'based_on_weather', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
 # ==========BREAK PLAN UPDATE SERIALIZERS===============
 class BreakPlanUpdateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -509,7 +518,34 @@ class BreakPlanUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         return validate_break_plan(data)
+
+class BreakPlanActionSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(choices=['approve', 'reject', 'take', 'miss', 'cancel', 'accept'])
+    reason = serializers.CharField(required=False, allow_blank=True)
     
+    def validate_action(self, value):
+        break_plan = self.context.get('break_plan')
+        # If break_plan is None, it's a suggestion, allow only 'accept'
+        if not break_plan:
+            if value != 'accept':
+                raise serializers.ValidationError("Only 'accept' action is allowed for suggestions.")
+            return value
+
+        current_status = break_plan.status
+        valid_transitions = {
+            'planned': ['approve', 'reject', 'cancel'],
+            'pending': ['approve', 'reject', 'cancel'],
+            'approved': ['take', 'miss', 'cancel'],
+            'rejected': [],
+            'taken': [],
+            'missed': [],
+            'cancelled': [],
+        }
+        if value not in valid_transitions.get(current_status, []):
+            raise serializers.ValidationError(
+                f"Cannot perform '{value}' action on a break with '{current_status}' status"
+            )
+        return value
 
 
 # ==========BREAK LEAVE BALANCCE SERIALIZERS===============
@@ -776,7 +812,7 @@ class StreakScoreSerializer(serializers.ModelSerializer):
 class BadgeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Badge
-        fields = ['id', 'badge_type', 'level', 'description', 'requirements_met', 
+        fields = ['id', 'badge_type', 'description', 'requirements_met', 
                  'earned_date', 'created_at', 'updated_at']
         read_only_fields = ['user', 'created_at', 'updated_at']
 

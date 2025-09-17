@@ -9,6 +9,8 @@ import uuid
 
 # Gamification models are now included directly in this file
 
+
+
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, full_name=None, **extra_fields):
         if not email:
@@ -391,39 +393,30 @@ class StreakScore(models.Model):
 ######## Badge Models #############################
 class Badge(models.Model):
     BADGE_TYPES = [
-        ('weekend_breaker', 'Weekend Breaker'),  # Taking breaks every weekend for a month
-        ('holiday_master', 'Holiday Master'),     # Taking a break on every public holiday in a year
-        ('consistent_breaker', 'Consistent Breaker'),  # Maintaining a 6-month streak
-        ('break_pro', 'Break Pro'),              # Achieving high break scores
-        ('wellness_warrior', 'Wellness Warrior'),  # Reporting positive wellbeing after breaks
-        ('perfect_planner', 'Perfect Planner'),   # Planning breaks well in advance
-        ('weekend_recharger', 'Weekend Recharger')  # Consistently taking weekend breaks
-    ]
-    
-    BADGE_LEVELS = [
-        ('bronze', 'Bronze'),
-        ('silver', 'Silver'),
-        ('gold', 'Gold'),
-        ('platinum', 'Platinum')
+        ('weekend_breaker', 'Weekend Breaker'),
+        ('holiday_master', 'Holiday Master'),
+        ('consistent_breaker', 'Consistent Breaker'),
+        ('break_pro', 'Break Pro'),
+        ('wellness_warrior', 'Wellness Warrior'),
+        ('perfect_planner', 'Perfect Planner'),
+        ('weekend_recharger', 'Weekend Recharger')
     ]
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='badges')
     badge_type = models.CharField(max_length=50, choices=BADGE_TYPES)
-    level = models.CharField(max_length=20, choices=BADGE_LEVELS, default='bronze')
     earned_date = models.DateField(auto_now_add=True)
     description = models.TextField()
-    requirements_met = models.JSONField(default=dict)  # Store details about how badge was earned
+    requirements_met = models.JSONField(default=dict)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        unique_together = ('user', 'badge_type', 'level')
-        ordering = ['badge_type', 'level']
+        unique_together = ('user', 'badge_type')
+        ordering = ['badge_type']
     
     def __str__(self):
-        return f"{self.user.email}'s {self.get_level_display()} {self.get_badge_type_display()} Badge"
-
+        return f"{self.user.email}'s {self.get_badge_type_display()} Badge"
 
 ########## Optimization Score Models #############################
 class OptimizationScore(models.Model):
@@ -519,10 +512,13 @@ class BreakPlan(models.Model):
     ]
 
     BREAK_STATUSES = [
-        ('planned', 'Planned'),
-        ('pending', 'Pending'),
-        ('approved', 'Approved'),
-        ('rejected', 'Rejected'),
+        ('planned', 'Planned'),     # created but not yet pending (draft)
+        ('pending', 'Pending'),     # user submitted, waiting manager approval
+        ('approved', 'Approved'),   # manager approved
+        ('rejected', 'Rejected'),   # manager rejected
+        ('taken', 'Taken'),         # user confirmed taken (or auto-confirmed)
+        ('missed', 'Missed'),       # approved but not taken (auto-marked)
+        ('cancelled', 'Cancelled'), # user cancelled before start
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -544,7 +540,7 @@ class BreakPlan(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        """Deduct leave days when approved and update gamification scores."""
+        """Handle break lifecycle and update gamification scores."""
         is_new = self._state.adding
         old_status = None
         
@@ -559,8 +555,13 @@ class BreakPlan(models.Model):
         # Call the original save method
         super().save(*args, **kwargs)
         
-        # If status changed to 'approved', update leave balance and create break score
+        # If status changed to 'approved', update leave balance
         if self.status == 'approved' and old_status != 'approved':
+            # No deduction yet, only when break is taken
+            pass
+            
+        # If status changed to 'taken', deduct leave balance and update gamification positively
+        elif self.status == 'taken' and old_status != 'taken':
             # Deduct leave days
             days_requested = (self.endDate.date() - self.startDate.date()).days + 1
             self.leave_balance.deduct_days(days_requested)
@@ -577,7 +578,7 @@ class BreakPlan(models.Model):
                     'frequency_points': 10,  # Default points for taking a break
                     'adherence_points': 5,   # Default points for following the plan
                     'wellbeing_impact': 5,   # Default positive impact
-                    'notes': f"Automatically logged from approved break plan: {self.description}"
+                    'notes': f"Break taken: {self.description}"
                 }
             )
             
@@ -600,6 +601,34 @@ class BreakPlan(models.Model):
                     if hasattr(self.user, 'highest_streak') and streak.longest_streak > self.user.highest_streak:
                         self.user.highest_streak = streak.longest_streak
                     self.user.save(update_fields=['total_break_score', 'highest_streak'])
+        
+        # If status changed to 'missed', update gamification negatively
+        elif self.status == 'missed' and old_status != 'missed':
+            # Reset streak
+            streak, streak_created = StreakScore.objects.get_or_create(
+                user=self.user,
+                streak_period='monthly'  # Default to monthly streak
+            )
+            streak.current_streak = 0
+            streak.streak_start_date = None
+            streak.save()
+            
+            # Create a negative break score
+            break_score, created = BreakScore.objects.get_or_create(
+                user=self.user,
+                score_date=self.startDate.date(),
+                defaults={
+                    'break_type': 'personal',
+                    'frequency_points': 0,
+                    'adherence_points': -5,  # Negative points for missing
+                    'wellbeing_impact': -5,  # Negative impact
+                    'notes': f"Break missed: {self.description}"
+                }
+            )
+            
+            if created:
+                break_score.calculate_total_score()
+                break_score.save()
                 
                 # Update optimization score
                 self._update_optimization_score()
@@ -653,19 +682,9 @@ class BreakPlan(models.Model):
         
         # Check for Consistent Breaker badge (based on streak)
         if current_streak >= 3:  # If user has a streak of at least 3
-            badge_level = 'bronze'
-            if current_streak >= 6:
-                badge_level = 'silver'
-            if current_streak >= 12:
-                badge_level = 'gold'
-            if current_streak >= 24:
-                badge_level = 'platinum'
-                
-            # Create or update the badge
             Badge.objects.get_or_create(
                 user=self.user,
                 badge_type='consistent_breaker',
-                level=badge_level,
                 defaults={
                     'description': f'Maintained a streak of {current_streak} consecutive monthly breaks',
                     'requirements_met': {'streak': current_streak}
@@ -674,19 +693,9 @@ class BreakPlan(models.Model):
         
         # Check for Break Pro badge (based on number of breaks)
         if recent_breaks >= 4:  # If user has taken at least 4 breaks in the last 30 days
-            badge_level = 'bronze'
-            if recent_breaks >= 8:
-                badge_level = 'silver'
-            if recent_breaks >= 12:
-                badge_level = 'gold'
-            if recent_breaks >= 20:
-                badge_level = 'platinum'
-                
-            # Create or update the badge
             Badge.objects.get_or_create(
                 user=self.user,
                 badge_type='break_pro',
-                level=badge_level,
                 defaults={
                     'description': f'Took {recent_breaks} breaks in the last 30 days',
                     'requirements_met': {'recent_breaks': recent_breaks}
@@ -696,13 +705,9 @@ class BreakPlan(models.Model):
         # Check for Perfect Planner badge (based on planning breaks in advance)
         # This is a simple implementation - in a real system, you might want to check
         # how far in advance the break was planned
-        badge_level = 'bronze'  # Start with bronze for planning any break
-        
-        # Create or update the badge
         Badge.objects.get_or_create(
             user=self.user,
             badge_type='perfect_planner',
-            level=badge_level,
             defaults={
                 'description': 'Planned and took a break successfully',
                 'requirements_met': {'planned_breaks': 1}
@@ -714,6 +719,33 @@ class BreakPlan(models.Model):
             f"{self.user.full_name if getattr(self.user, 'full_name', None) else self.user.email} "
             f"- {self.type} ({self.startDate.date()} to {self.endDate.date()})"
         )
+
+
+# Break Suggestion model for personalized break recommendations
+class BreakSuggestion(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='break_suggestions')
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    start_date = models.DateField()
+    end_date = models.DateField()
+    reason = models.CharField(max_length=255, help_text="Reason for suggesting this break")
+    priority = models.IntegerField(default=0, help_text="Higher number means higher priority")
+    is_accepted = models.BooleanField(null=True, blank=True, help_text="Whether user accepted this suggestion")
+    based_on_mood = models.BooleanField(default=False)
+    based_on_workload = models.BooleanField(default=False)
+    based_on_preferences = models.BooleanField(default=False)
+    based_on_weather = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ["-priority", "-created_at"]
+    
+    def __str__(self):
+        return f"Break suggestion for {self.user.email}: {self.title} ({self.start_date} to {self.end_date})"
+
+
 
 # ----------------------------------------
 ######### Leave Balance Models #############################

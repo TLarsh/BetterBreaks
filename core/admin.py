@@ -13,6 +13,8 @@ from .models import (
     # OnboardingData,
     UserNotificationPreference,
     BreakPlan,
+    BreakSuggestion,
+    Badge,
     LeaveBalance,
     BreakPreferences,
     PublicHoliday,
@@ -159,6 +161,26 @@ class BreakPlanAdmin(admin.ModelAdmin):
         }),
     )
 
+# Custom Admin Configuration for BreakSuggestion Model
+@admin.register(BreakSuggestion)
+class BreakSuggestionAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "title",
+        "start_date",
+        "end_date",
+        "priority",
+        "is_accepted",
+        "created_at",
+        "updated_at",
+    )
+    list_filter = ("priority", "is_accepted", "start_date", "end_date", "based_on_mood", "based_on_workload", "based_on_preferences", "based_on_weather")
+    search_fields = ("user__email", "title", "description", "reason")
+    date_hierarchy = "start_date"
+    ordering = ("-priority", "-created_at")
+    autocomplete_fields = ("user",)
+    readonly_fields = ("created_at", "updated_at")
+
 @admin.register(ContactMessage)
 class ContactMessageAdmin(admin.ModelAdmin):
     list_display = (
@@ -203,6 +225,7 @@ class LeaveBalanceAdmin(admin.ModelAdmin):
     readonly_fields = ("updated_at",)
     search_fields = ("anual_leave_balance",)
 
+# Custom Admin Configuration for BreakPreferences Model
 @admin.register(BreakPreferences)
 class BreakPreferencesAdmin(admin.ModelAdmin):
     list_display = (
@@ -233,6 +256,25 @@ class BreakPreferencesAdmin(admin.ModelAdmin):
         }),
     )
 
+
+# Custom Admin Configuration for Badge Model
+@admin.register(Badge)
+class BadgeAdmin(admin.ModelAdmin):
+    list_display = (
+        "user",
+        "badge_type",
+        "earned_date",
+        "description",
+        "requirements_met",
+        "created_at",
+        "updated_at",
+    )
+    list_filter = ("badge_type", "earned_date", "created_at")
+    search_fields = ("user__email", "badge_type", "description")
+    readonly_fields = ("created_at", "updated_at", "earned_date")
+    autocomplete_fields = ("user",)
+
+# Custom Admin Configuration for PublicHoliday Model
 @admin.register(PublicHoliday)
 class PublicHolidayAdmin(admin.ModelAdmin):
     list_display = ("name", "date", "country_code", "calendar")
@@ -243,6 +285,7 @@ class PublicHolidayAdmin(admin.ModelAdmin):
     autocomplete_fields = ("calendar",)
 
 
+# Custom Admin Configuration for PublicHolidayCalendar Model
 @admin.register(PublicHolidayCalendar)
 class PublicHolidayCalendarAdmin(admin.ModelAdmin):
     list_display = ("user", "country_code", "is_enabled", "last_synced")

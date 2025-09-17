@@ -447,55 +447,6 @@ holiday_detail_get = swagger_auto_schema(
     },
 )
 
-holiday_detail_post = swagger_auto_schema(
-    operation_summary="Update user's holiday calendar",
-    operation_description="Updates the user's holiday calendar country code and syncs holidays.",
-    request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        required=["country_code"],
-        properties={
-            "country_code": openapi.Schema(type=openapi.TYPE_STRING, description="Country code (e.g., US, GB, DE)"),
-        },
-    ),
-    responses={
-        200: openapi.Response(
-            description="Holiday calendar updated successfully",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    "message": openapi.Schema(type=openapi.TYPE_STRING, description="Success message"),
-                    "status": openapi.Schema(type=openapi.TYPE_BOOLEAN, description="Status of the request"),
-                    "data": openapi.Schema(
-                        type=openapi.TYPE_OBJECT,
-                        properties={
-                            "country_code": openapi.Schema(type=openapi.TYPE_STRING, description="Updated country code"),
-                            "task_id": openapi.Schema(type=openapi.TYPE_STRING, description="Celery task ID for holiday sync"),
-                        }
-                    ),
-                    "errors": openapi.Schema(type=openapi.TYPE_OBJECT, description="Errors if any"),
-                }
-            )
-        ),
-        400: openapi.Response(
-            description="Bad Request",
-            schema=openapi.Schema(
-                type=openapi.TYPE_OBJECT,
-                properties={
-                    "message": openapi.Schema(type=openapi.TYPE_STRING, description="Error message"),
-                    "status": openapi.Schema(type=openapi.TYPE_BOOLEAN, description="Status of the request"),
-                    "data": openapi.Schema(type=openapi.TYPE_OBJECT, description="Data if any"),
-                    "errors": openapi.Schema(
-                        type=openapi.TYPE_OBJECT,
-                        properties={
-                            "country_code": openapi.Schema(type=openapi.TYPE_STRING, description="Country code error message"),
-                        }
-                    ),
-                }
-            )
-        ),
-    }
-)
-
 holiday_detail_put = swagger_auto_schema(
     operation_summary="Update a specific holiday",
     operation_description="Update details of an existing holiday by ID, only if it belongs to the logged-in user's holiday calendar.",
@@ -570,7 +521,34 @@ break_log_delete = swagger_auto_schema(
     responses={204: "Deleted successfully"},
 )
 
-
+break_plan_action = swagger_auto_schema(
+        operation_summary="Update break plan status",
+        operation_description="Approve, reject, take, miss, or cancel a break plan.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'action': openapi.Schema(type=openapi.TYPE_STRING, description='Action to perform (approve, reject, take, miss, cancel)'),
+                'reason': openapi.Schema(type=openapi.TYPE_STRING, description='Optional reason for the action'),
+            },
+            required=['action'],
+        ),
+        responses={
+            200: openapi.Response(
+                description="Break plan updated successfully",
+                examples={
+                    "application/json": {
+                        "message": "Break successfully approved",
+                        "data": {
+                            # Example break plan data here
+                        }
+                    }
+                }
+            ),
+            400: "Invalid action",
+            404: "Break plan not found",
+            500: "Failed to update break plan"
+        }
+    )
 
 # --- OptimizationListCreateView ---
 optimization_list = swagger_auto_schema(
