@@ -144,12 +144,12 @@ urlpatterns = [
      path('api/holidays/upcoming/', UpcomingHolidaysView.as_view(), name='upcoming-holidays'),
 
 
-    # path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
-    # path("api/auth/facebook/", FacebookLoginView.as_view(), name="facebook-login"),
-    # path("api/auth/twitter/", TwitterLoginView.as_view(), name="twitter-login"),
-
     path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
+    path("api/auth/facebook/", FacebookLoginView.as_view(), name="facebook-login"),
     path("api/auth/twitter/", TwitterLoginView.as_view(), name="twitter-login"),
+
+    # path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
+    # path("api/auth/twitter/", TwitterLoginView.as_view(), name="twitter-login"),
     # path("api/auth/apple/", AppleLoginView.as_view(), name="apple-login"),
 
     path("api/message/send/", SendMessageView.as_view(), name="send-message"),
@@ -186,7 +186,7 @@ urlpatterns = [
     # path("api/breaks/plans/<uuid:planId>", UpdateBreakPlanView.as_view(), name="update-break-plan"),
     path("api/breaks/plan/<uuid:planId>", DeleteBreakPlanView.as_view(), name="delete-break-plan"),
     path("api/breaks/plan/action/<uuid:pk>/", BreakPlanActionView.as_view(), name="break-plan-action"),
-    path("api/breaks/suggest", BreakSuggestionListCreateView.as_view(), name="list-create-break-suggestions"),
+    # path("api/breaks/suggest", BreakSuggestionListCreateView.as_view(), name="list-create-break-suggestions"),
     # path("api/breaks/suggest/<uuid:pk>", BreakSuggestionDetailView.as_view(), name="break-suggestion-detail"),
 
 
