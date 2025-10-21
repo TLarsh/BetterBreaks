@@ -1,11 +1,8 @@
 from rest_framework.permissions import AllowAny
-from rest_framework.response import Response
 from rest_framework import status
 from dj_rest_auth.registration.views import SocialLoginView
-from allauth.socialaccount.models import SocialAccount
-from django.utils.timezone import now
-from .models import LastLogin
-from .utils import success_response, error_response
+from ..models import LastLogin
+from ..utils.responses import success_response, error_response
 import traceback
 
 

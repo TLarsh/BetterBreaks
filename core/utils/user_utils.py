@@ -1,8 +1,8 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
-from rest_framework import serializers, status
-from .serializers import RegisterSerializer
-from .models import User
-from .validators import validate_password
+from rest_framework import serializers
+from ..serializers.user_serializers import RegisterSerializer
+from ..models.user_models import User
+from .validator_utils import validate_password
 
 
 

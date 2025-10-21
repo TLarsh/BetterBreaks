@@ -17,8 +17,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.conf import settings
 import logging
-from .models import PublicHolidayCalendar
-from .tasks import sync_user_holidays
+from .models.holiday_models import PublicHolidayCalendar
+from .tasks.holiday_tasks import sync_user_holidays
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ from rest_framework.authentication import BaseAuthentication
 from rest_framework.exceptions import PermissionDenied
 from django.utils.translation import gettext_lazy as _
 import uuid
-from .models import LastLogin, User
+from ..models import LastLogin, User
 
 class TokenAuthentication(BaseAuthentication):
     """

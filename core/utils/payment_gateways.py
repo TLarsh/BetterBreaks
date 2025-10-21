@@ -2,8 +2,8 @@ import requests
 from django.conf import settings
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Booking
-from .serializers import PaymentSerializer
+from ..models.booking_models import Booking
+from ..serializers.payment_serializers import PaymentSerializer
 
 
 class PaystackGateway:
