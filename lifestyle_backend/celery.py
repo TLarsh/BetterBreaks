@@ -14,4 +14,8 @@ app.conf.beat_schedule = {
         "task": "core.tasks.refresh_all_user_holidays",
         "schedule": crontab(day_of_month=1, hour=0, minute=0),  # every 1st day of month
     },
+    "generate-recommendations-weekly": {
+        "task": "core.tasks.recommendation_tasks.generate_recommendations_for_all_users",
+        "schedule": crontab(day_of_week=1, hour=1, minute=0),  # every Monday at 1:00 AM
+    },
 }

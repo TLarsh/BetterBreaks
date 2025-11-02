@@ -222,7 +222,8 @@ from .swagger_api_fe import (
 
     # path('api/', include(router.urls)),
 
-
+#     # Recommendation URLs
+#     path('', include('core.urls.recommendation_urls')),
 # ]
 
 

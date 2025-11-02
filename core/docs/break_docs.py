@@ -2,7 +2,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from core.serializers.score_serializers import BreakScoreSerializer
-from core.serializers.break_serializers import BreakPlanSerializer
+from core.serializers.break_serializers import BreakRecommendationSerializer, BreakPlanSerializer
 # from core.models.preference_models import BreakPreference
 
 
@@ -74,3 +74,25 @@ break_plan_action = swagger_auto_schema(
             500: "Failed to update break plan"
         }
     )
+
+
+
+
+
+
+recommend_breaks_schema = swagger_auto_schema(
+    request_body=BreakRecommendationSerializer,
+    responses={
+        200: openapi.Response(
+            description="Break recommendation generated successfully."
+        ),
+        400: "Invalid input",
+        500: "Internal server error"
+    },
+    operation_summary="Generate personalized break recommendations",
+    operation_description=(
+        "This endpoint uses ML models to predict ideal break duration and "
+        "seasonal preferences based on user input."
+    ),
+    tags=["Break Recommendations"]
+)

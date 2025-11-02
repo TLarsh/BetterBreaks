@@ -8,7 +8,8 @@
 #     onboarding_admins,
 #     preference_admins,
 #     setting_admins,
-#     user_admins
+#     user_admins,
+#     recommendation_admins,
 # )
 
 

@@ -22,8 +22,8 @@ from ..serializers.break_serializers import (
 from ..serializers.badge_serializers import BadgeSerializer
 from ..serializers.score_serializers import BreakScoreSerializer, StreakScoreSerializer
 from ..docs.break_docs import (
-    # break_plan_create,
     # break_plan_list,
+    # break_plan_create,
     # break_plan_update,
     # break_plan_delete,
     break_plan_action,
@@ -33,6 +33,7 @@ from ..docs.break_docs import (
     break_log_delete,
     # break_log_summary,
     break_log_retrieve,
+    recommend_breaks_schema,
 )
 from ..models.break_models import BreakPlan, BreakSuggestion, LeaveBalance
 from ..serializers.break_serializers import BreakSuggestionSerializer, BreakPlanActionSerializer
@@ -47,6 +48,9 @@ from ..utils.responses import success_response, error_response
 logger = logging.getLogger(__name__)
 
 
+
+from ..serializers.break_serializers import BreakRecommendationSerializer
+from ..ml_engine.breaks_engine import generate_break_recommendation
 
 
 # --------------CREATE BREAK PLAN------------------
@@ -751,3 +755,7 @@ class BreakLogDetailView(APIView):
         break_score = self.get_object(pk)
         break_score.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+
+
+

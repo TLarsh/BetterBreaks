@@ -18,13 +18,13 @@ class BreakPlan(models.Model):
     ]
 
     BREAK_STATUSES = [
-        ('planned', 'Planned'),     # created but not yet pending (draft)
-        ('pending', 'Pending'),     # user submitted, waiting manager approval
-        ('approved', 'Approved'),   # manager approved
-        ('rejected', 'Rejected'),   # manager rejected
-        ('taken', 'Taken'),         # user confirmed taken (or auto-confirmed)
-        ('missed', 'Missed'),       # approved but not taken (auto-marked)
-        ('cancelled', 'Cancelled'), # user cancelled before start
+        ('planned', 'Planned'),     
+        ('pending', 'Pending'),     
+        ('approved', 'Approved'),
+        ('rejected', 'Rejected'),
+        ('taken', 'Taken'),
+        ('missed', 'Missed'),
+        ('cancelled', 'Cancelled'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -50,7 +50,7 @@ class BreakPlan(models.Model):
         is_new = self._state.adding
         old_status = None
         
-        # If this is an existing object, get the old status
+        
         if not is_new:
             try:
                 old_instance = BreakPlan.objects.get(pk=self.pk)
@@ -58,7 +58,7 @@ class BreakPlan(models.Model):
             except BreakPlan.DoesNotExist:
                 pass
         
-        # Call the original save method
+        
         super().save(*args, **kwargs)
         
         # If status changed to 'approved', update leave balance
@@ -72,18 +72,18 @@ class BreakPlan(models.Model):
             days_requested = (self.endDate.date() - self.startDate.date()).days + 1
             self.leave_balance.deduct_days(days_requested)
             
-            # Create a BreakScore entry
+            #  BreakScore entry
             from django.utils import timezone
-            break_type = 'personal'  # Default to personal break
+            break_type = 'personal'  
             
             break_score, created = BreakScore.objects.get_or_create(
                 user=self.user,
                 score_date=self.startDate.date(),
                 defaults={
                     'break_type': break_type,
-                    'frequency_points': 10,  # Default points for taking a break
-                    'adherence_points': 5,   # Default points for following the plan
-                    'wellbeing_impact': 5,   # Default positive impact
+                    'frequency_points': 10,  
+                    'adherence_points': 5,
+                    'wellbeing_impact': 5,
                     'notes': f"Break taken: {self.description}"
                 }
             )
@@ -208,9 +208,7 @@ class BreakPlan(models.Model):
                 }
             )
         
-        # Check for Perfect Planner badge (based on planning breaks in advance)
-        # This is a simple implementation - in a real system, you might want to check
-        # how far in advance the break was planned
+        
         Badge.objects.get_or_create(
             user=self.user,
             badge_type='perfect_planner',

@@ -145,3 +145,12 @@ class BreakPlanActionSerializer(serializers.Serializer):
                 f"Cannot perform '{value}' action on a break with '{current_status}' status"
             )
         return value
+    
+
+
+class BreakRecommendationSerializer(serializers.Serializer):
+    work_hours_per_week = serializers.IntegerField(required=True)
+    stress_level = serializers.IntegerField(required=True)
+    sleep_quality = serializers.IntegerField(required=True)
+    prefers_travel = serializers.BooleanField(required=True)
+    season_preference = serializers.CharField(required=False, allow_blank=True)

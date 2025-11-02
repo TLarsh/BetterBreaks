@@ -9,14 +9,14 @@ User = get_user_model()
 
 class SuggestedDatesViewTests(APITestCase):
     def setUp(self):
-        # Create and authenticate a test user
+        
         self.user = User.objects.create_user(
             email='testuser@example.com',
             password='password123',
-            home_location_coordinates=None  # Default no location
+            home_location_coordinates=None  
         )
         self.client.force_authenticate(user=self.user)
-        self.url = reverse('suggested-dates')  # Make sure this matches your URL name
+        self.url = reverse('suggested-dates')
 
     def test_unauthenticated_access(self):
         """Test that unauthenticated users cannot access the view."""
@@ -34,13 +34,13 @@ class SuggestedDatesViewTests(APITestCase):
 
 class BreakPlanGamificationTests(APITestCase):
     def setUp(self):
-        # Create a test user
+
         self.user = User.objects.create_user(
             email='breaktest@example.com',
             password='password123'
         )
         
-        # Create leave balance for the user
+    
         self.leave_balance = LeaveBalance.objects.create(
             user=self.user,
             anual_leave_balance=20,
@@ -48,7 +48,6 @@ class BreakPlanGamificationTests(APITestCase):
             already_used_balance=0
         )
         
-        # Create a break plan (not yet approved)
         self.break_plan = BreakPlan.objects.create(
             user=self.user,
             leave_balance=self.leave_balance,
@@ -56,25 +55,25 @@ class BreakPlanGamificationTests(APITestCase):
             endDate=datetime.now() + timedelta(days=15),
             description="Test vacation",
             type="vacation",
-            status="planned"  # Initially planned, not approved
+            status="planned"  
         )
         
-        # Set up client and authentication
+       
         self.client = APIClient()
         self.client.force_authenticate(user=self.user)
     
     def test_break_plan_approval_creates_gamification_entries(self):
         """Test that approving a break plan creates appropriate gamification entries."""
-        # Verify no break scores exist yet
+       
         self.assertEqual(BreakScore.objects.filter(user=self.user).count(), 0)
         self.assertEqual(StreakScore.objects.filter(user=self.user).count(), 0)
         self.assertEqual(Badge.objects.filter(user=self.user).count(), 0)
         
-        # Approve the break plan
+     
         self.break_plan.status = "approved"
         self.break_plan.save()
         
-        # Check that a BreakScore was created
+       
         break_scores = BreakScore.objects.filter(user=self.user)
         self.assertEqual(break_scores.count(), 1)
         self.assertEqual(break_scores[0].score_date, self.break_plan.startDate.date())
@@ -82,7 +81,7 @@ class BreakPlanGamificationTests(APITestCase):
         # Check that a StreakScore was created/updated
         streak_scores = StreakScore.objects.filter(user=self.user)
         self.assertEqual(streak_scores.count(), 1)
-        self.assertEqual(streak_scores[0].current_streak, 1)  # First break in streak
+        self.assertEqual(streak_scores[0].current_streak, 1) 
         
         # Check that at least one badge was awarded
         badges = Badge.objects.filter(user=self.user)
@@ -130,7 +129,7 @@ class BreakPlanGamificationTests(APITestCase):
             'startDate': self.break_plan.startDate.isoformat(),
             'endDate': self.break_plan.endDate.isoformat(),
             'description': self.break_plan.description,
-            'status': 'approved'  # Change status to approved
+            'status': 'approved'  
         }
         response = self.client.put(url, data, format='json')
         
@@ -151,8 +150,7 @@ class BreakPlanGamificationTests(APITestCase):
         # Check that a StreakScore was created/updated
         streak_scores = StreakScore.objects.filter(user=self.user)
         self.assertEqual(streak_scores.count(), 1)
-        self.assertEqual(streak_scores[0].current_streak, 1)  # First break in streak
-        
+        self.assertEqual(streak_scores[0].current_streak, 1)  
         # Check that at least one badge was awarded
         badges = Badge.objects.filter(user=self.user)
         self.assertGreater(badges.count(), 0)

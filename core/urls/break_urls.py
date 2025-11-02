@@ -7,6 +7,7 @@ from ..views.break_views import (
     DeleteBreakPlanView,
     BreakPlanActionView,
     BreakLogListCreateView, BreakLogDetailView,
+    # BreakRecommendationView,
 )
 
 urlpatterns = [
@@ -22,4 +23,6 @@ urlpatterns = [
     path("api/breaks/plan/action/<uuid:pk>/", BreakPlanActionView.as_view(), name="break-plan-action"),
     # path("api/breaks/suggest", BreakSuggestionListCreateView.as_view(), name="list-create-break-suggestions"),
     # path("api/breaks/suggest/<uuid:pk>", BreakSuggestionDetailView.as_view(), name="break-suggestion-detail"),
+
+    # path("api/breaks/recommend/", BreakRecommendationView.as_view(), name="recommend-breaks"),
 ]

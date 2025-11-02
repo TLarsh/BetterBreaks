@@ -3,9 +3,8 @@ import logging
 from celery import shared_task
 from django.utils.timezone import now
 from django.conf import settings
-# from .models import User, PublicHoliday, PublicHolidayCalendar
 from core.models.holiday_models import PublicHolidayCalendar, PublicHoliday
-User = settings.AUTH_USER_MODEL
+from core.models.user_models import User
 
 logger = logging.getLogger(__name__)
 
