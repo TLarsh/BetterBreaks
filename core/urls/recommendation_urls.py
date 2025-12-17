@@ -1,9 +1,9 @@
 from django.urls import path
 from ..views.recommendation_views import (
-    UserMetricsView, 
-    BreakRecommendationView, 
+    UserMetricsView,
+    BreakRecommendationView,
     BreakRecommendationDetailView,
-    convert_to_break_plan
+    convert_to_break_plan,
 )
 
 urlpatterns = [
