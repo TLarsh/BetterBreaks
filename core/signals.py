@@ -20,6 +20,11 @@ import logging
 from .models.holiday_models import PublicHolidayCalendar
 from .tasks.holiday_tasks import sync_user_holidays
 
+
+
+from .models.break_execution import BreakExecution
+from .tasks.break_lifecycle_tasks import process_break_completion_async
+
 logger = logging.getLogger(__name__)
 
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
@@ -68,3 +73,10 @@ def create_calendar_and_sync(sender, instance, created, **kwargs):
 
     except Exception as e:
         logger.error(f"Error ensuring calendar for user {instance.id}: {str(e)}")
+
+
+
+@receiver(post_save, sender=BreakExecution)
+def on_break_execution_update(sender, instance, created, **kwargs):
+    if instance.status == "taken":
+        process_break_completion_async.delay(instance.id)

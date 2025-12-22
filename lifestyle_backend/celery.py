@@ -18,4 +18,22 @@ app.conf.beat_schedule = {
         "task": "core.tasks.recommendation_tasks.generate_recommendations_for_all_users",
         "schedule": crontab(day_of_week=1, hour=1, minute=0),  # every Monday at 1:00 AM
     },
+
+
+    "mark-missed-breaks-daily": {
+        "task": "app.tasks.break_monitoring.mark_missed_breaks",
+        "schedule": crontab(hour=1, minute=0),
+    },
+    "refresh-all-user-metrics-daily": {
+        "task": "core.tasks.metrics_tasks.refresh_all_user_metrics",
+        "schedule": crontab(hour=2, minute=0),
+    },
+    # "refresh-user-metrics-nightly": {
+    #     "task": "app.tasks.metrics_tasks.refresh_user_metrics",
+    #     "schedule": crontab(hour=2, minute=0),
+    # },
+    "daily-optimization-snapshot": {
+        "task": "app.tasks.optimization_tasks.recalculate_daily_optimization",
+        "schedule": crontab(hour=3, minute=0),
+    },
 }
