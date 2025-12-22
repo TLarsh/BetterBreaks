@@ -1,19 +1,28 @@
 import logging
 from datetime import date, timedelta
 
+from django.utils import timezone
+
 from ..models.recommendation_models import UserMetrics, BreakRecommendation
 from ..models.break_models import BreakPlan
 from ..models.user_models import User
 from ..models.holiday_models import PublicHolidayCalendar
-from core.ml_engine.breaks_engine import generate_break_recommendation
+from ..models.leave_balance_models import LeaveBalance
 
+from core.ml_engine.breaks_engine import generate_break_recommendation
 
 logger = logging.getLogger(__name__)
 
 
 class RecommendationService:
-    """Service for generating break recommendations using the ML engine"""
+    """
+    Service for generating break recommendations using the ML engine.
+    Relies ONLY on system-derived UserMetrics.
+    """
 
+    # ------------------------------------------------------------------
+    # Metrics → ML input
+    # ------------------------------------------------------------------
     @staticmethod
     def get_user_input_dict(user_metrics: UserMetrics) -> dict:
         """Convert UserMetrics model to input dict for ML engine"""
@@ -25,65 +34,95 @@ class RecommendationService:
             "season_preference": user_metrics.season_preference,
         }
 
+    # ------------------------------------------------------------------
+    # Recommendation generation
+    # ------------------------------------------------------------------
     @staticmethod
     def generate_recommendation(user: User) -> BreakRecommendation | None:
-        """Generate a break recommendation for a user using the trained ML model with safeguards."""
+        """
+        Generate a break recommendation for a user.
+        Returns existing recent recommendation if found.
+        """
         try:
-            # Get user metrics (create defaults if missing)
-            try:
-                user_metrics = UserMetrics.objects.get(user=user)
-            except UserMetrics.DoesNotExist:
-                user_metrics = UserMetrics.objects.create(user=user)
+            # Metrics must exist (built by UserMetricsService)
+            user_metrics = UserMetrics.objects.get(user=user)
 
-            # Check if user already has a recent recommendation (within last 7 days)
+            # Avoid spamming recommendations (7-day window)
             recent_recommendation = BreakRecommendation.objects.filter(
                 user=user,
-                created_at__gte=date.today() - timedelta(days=7),
+                created_at__gte=timezone.now() - timedelta(days=7),
             ).first()
+
             if recent_recommendation:
                 return recent_recommendation
 
-            # Convert to input dict for ML engine
+            # ML input
             user_input = RecommendationService.get_user_input_dict(user_metrics)
 
-            # Generate recommendation using ML engine
+            # Generate via ML / heuristic engine
             recommendation_data = generate_break_recommendation(user_input)
 
-            # Parse dates
-            start_date = date.fromisoformat(recommendation_data["recommended_start_date"])  # type: ignore
-            end_date = date.fromisoformat(recommendation_data["recommended_end_date"])  # type: ignore
-
-            # Optional optimization around public holidays (fine-tuning window by +-14 days)
-            optimized_start, optimized_end = RecommendationService.optimize_around_holidays(
-                user, start_date, end_date
+            # Parse dates safely
+            start_date = date.fromisoformat(
+                recommendation_data["recommended_start_date"]
+            )
+            end_date = date.fromisoformat(
+                recommendation_data["recommended_end_date"]
             )
 
-            # Create BreakRecommendation object
+            # Optimize around public holidays
+            optimized_start, optimized_end = (
+                RecommendationService.optimize_around_holidays(
+                    user, start_date, end_date
+                )
+            )
+
+            # Persist recommendation
             recommendation = BreakRecommendation.objects.create(
                 user=user,
                 recommended_start_date=optimized_start,
                 recommended_end_date=optimized_end,
-                predicted_length_days=recommendation_data.get("predicted_length_days", (optimized_end - optimized_start).days),
+                predicted_length_days=recommendation_data.get(
+                    "predicted_length_days",
+                    (optimized_end - optimized_start).days,
+                ),
                 recommended_season=recommendation_data.get("recommended_season"),
                 message=recommendation_data.get("message", ""),
             )
 
             return recommendation
-        except Exception as e:
-            logger.error(f"Error generating recommendation: {str(e)}", exc_info=True)
+
+        except UserMetrics.DoesNotExist:
+            logger.warning(
+                f"Cannot generate recommendation — metrics missing for user {user.id}"
+            )
             return None
 
+        except Exception as e:
+            logger.error(
+                f"Error generating recommendation for user {user.id}: {str(e)}",
+                exc_info=True,
+            )
+            return None
+
+    # ------------------------------------------------------------------
+    # Holiday optimization
+    # ------------------------------------------------------------------
     @staticmethod
-    def optimize_around_holidays(user: User, start_date: date, end_date: date) -> tuple[date, date]:
-        """Optimize break dates around public holidays to maximize rest days."""
+    def optimize_around_holidays(
+        user: User, start_date: date, end_date: date
+    ) -> tuple[date, date]:
+        """
+        Adjust break dates to include nearby public holidays (+/- 14 days).
+        """
         try:
-            calendar = PublicHolidayCalendar.objects.filter(country=user.home_location_timezone).first()
-            if not calendar:
+            calendar = PublicHolidayCalendar.objects.filter(user=user).first()
+            if not calendar or not calendar.is_enabled:
                 return start_date, end_date
 
-            # Get holidays in the date range +/- 14 days
             search_start = start_date - timedelta(days=14)
             search_end = end_date + timedelta(days=14)
+
             holidays = list(
                 calendar.holidays.filter(
                     date__gte=search_start,
@@ -94,40 +133,45 @@ class RecommendationService:
             if not holidays:
                 return start_date, end_date
 
-            # Find closest holiday to start_date
-            closest_holiday = min(holidays, key=lambda x: abs((x - start_date).days))
+            closest_holiday = min(
+                holidays, key=lambda d: abs((d - start_date).days)
+            )
 
-            # If holiday is within 3 days of start_date, adjust to include it
             if abs((closest_holiday - start_date).days) <= 3:
                 if closest_holiday < start_date:
-                    new_start = closest_holiday
-                    new_end = end_date + (start_date - closest_holiday)
+                    delta = start_date - closest_holiday
+                    return closest_holiday, end_date + delta
                 else:
-                    new_start = start_date
-                    new_end = end_date + (closest_holiday - start_date)
-                return new_start, new_end
+                    delta = closest_holiday - start_date
+                    return start_date, end_date + delta
 
             return start_date, end_date
+
         except Exception as e:
-            logger.warning(f"Error optimizing around holidays: {str(e)}")
+            logger.warning(
+                f"Holiday optimization failed for user {user.id}: {str(e)}"
+            )
             return start_date, end_date
 
+    # ------------------------------------------------------------------
+    # Recommendation → BreakPlan
+    # ------------------------------------------------------------------
     @staticmethod
-    def convert_recommendation_to_break_plan(recommendation: BreakRecommendation, user: User) -> BreakPlan:
-        """Convert a recommendation to a break plan."""
-        from ..models.leave_balance_models import LeaveBalance
-
-        # Get or create leave balance
+    def convert_recommendation_to_break_plan(
+        recommendation: BreakRecommendation, user: User
+    ) -> BreakPlan:
+        """Convert a recommendation into a planned BreakPlan."""
         leave_balance, _ = LeaveBalance.objects.get_or_create(
             user=user,
             defaults={
                 "anual_leave_balance": 60,
-                "anual_leave_refresh_date": date.today().replace(year=date.today().year + 1),
+                "anual_leave_refresh_date": date.today().replace(
+                    year=date.today().year + 1
+                ),
                 "already_used_balance": 0,
             },
         )
 
-        # Create break plan
         break_plan = BreakPlan.objects.create(
             user=user,
             leave_balance=leave_balance,

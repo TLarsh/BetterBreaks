@@ -21,6 +21,7 @@ class UserMetricsService:
 
     @staticmethod
     def build(user) -> UserMetrics:
+        # print("🔁 Rebuilding metrics for:", user.id)
         metrics, _ = UserMetrics.objects.get_or_create(user=user)
 
         # --------------------------------------------------
@@ -64,26 +65,26 @@ class UserMetricsService:
     def _calculate_work_hours(user) -> int:
         pattern = getattr(user, "working_pattern", None)
         base_hours = 40
-    
+
         if pattern:
             if pattern.pattern_type == "custom" and pattern.custom_days:
                 base_hours = len(pattern.custom_days) * 8
-    
+
             elif pattern.pattern_type == "shift" and pattern.days_on:
                 base_hours = min(60, pattern.days_on * 8)
-    
+
         # ---- Reduce hours by taken breaks (last 14 days) ----
         taken_breaks = BreakExecution.objects.filter(
             user=user,
             status="taken",
             actual_start__gte=timezone.now() - timedelta(days=14)
         )
-    
+
         break_hours = 0
         for b in taken_breaks:
             if b.actual_start and b.actual_end:
                 break_hours += (b.actual_end - b.actual_start).total_seconds() / 3600
-    
+
         adjusted_hours = max(20, int(base_hours - break_hours))
         return adjusted_hours
 

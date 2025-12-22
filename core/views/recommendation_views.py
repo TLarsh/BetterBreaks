@@ -15,6 +15,7 @@ from ..docs.recommendation_docs import (
 from ..models.recommendation_models import UserMetrics, BreakRecommendation
 from ..serializers.recommendation_serializers import UserMetricsSerializer, BreakRecommendationSerializer
 from ..services.recommendation_service import RecommendationService
+from ..services.user_metrics_service import UserMetricsService
 from ..ml_engine.breaks_engine import generate_break_recommendation
 
 
@@ -32,14 +33,21 @@ class UserMetricsView(APIView):
         except UserMetrics.DoesNotExist:
             return Response({"detail": "User metrics not found"}, status=status.HTTP_404_NOT_FOUND)
 
-    @user_metrics_post_docs
+    # @user_metrics_post_docs
+    # def post(self, request):
+    #     """Create or update user metrics"""
+    #     serializer = UserMetricsSerializer(data=request.data, context={'request': request})
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
     def post(self, request):
-        """Create or update user metrics"""
-        serializer = UserMetricsSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        metrics = UserMetricsService.build(request.user)
+        serializer = UserMetricsSerializer(metrics)
+        return Response(serializer.data, status=200)
+
 
 
 class BreakRecommendationView(APIView):
