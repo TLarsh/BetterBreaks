@@ -1,11 +1,36 @@
 from celery import shared_task
 from django.db import transaction
 from django.utils import timezone
-
+from datetime import timedelta
 from ..models.break_execution import BreakExecution
 from ..services.break_lifecycle_service import BreakLifecycleService
 from ..services.user_metrics_service import UserMetricsService
 from ..services.optimization_service import OptimizationService
+from ..services.notification_service import NotificationService
+
+
+# celery task
+
+def send_break_reminders():
+    tomorrow = timezone.now().date() + timedelta(days=1)
+
+    upcoming = BreakExecution.objects.filter(
+        status="approved",
+        recommended_start=tomorrow,
+    )
+
+    for br in upcoming:
+        NotificationService.notify(
+            user=br.user,
+            event="break_reminder",
+            title="Upcoming break ⏰",
+            message="You have a planned break starting tomorrow. Get ready!",
+            metadata={
+                "start": br.recommended_start.isoformat(),
+                "end": br.recommended_end.isoformat(),
+            },
+        )
+
 
 
 @shared_task(

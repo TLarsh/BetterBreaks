@@ -1,8 +1,8 @@
-# services/break_monitor.py
+# services/break_monitor_service.py
 
 from django.utils import timezone
 from ..models.break_execution import BreakExecution
-from .optimization_service import OptimizationService
+from .break_lifecycle_service import BreakLifecycleService
 
 
 def mark_missed_breaks():
@@ -10,14 +10,12 @@ def mark_missed_breaks():
 
     missed = BreakExecution.objects.filter(
         status="approved",
-        recommended_end__lt=today
+        recommended_end__lt=today,
+        processed_at__isnull=True,
     )
 
     for br in missed:
         br.status = "missed"
-        br.save()
+        br.save(update_fields=["status"])
 
-        OptimizationService.calculate_daily_optimization(
-            br.user,
-            br.recommended_start
-        )
+        BreakLifecycleService.process_break_missed(br)

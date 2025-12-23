@@ -32,3 +32,9 @@ class Badge(models.Model):
     
     def __str__(self):
         return f"{self.user.email}'s {self.get_badge_type_display()} Badge"
+    
+
+    @property
+    def name(self):
+        """Human-readable badge name."""
+        return self.get_badge_type_display()
