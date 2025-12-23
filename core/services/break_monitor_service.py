@@ -1,5 +1,3 @@
-# services/break_monitor_service.py
-
 from django.utils import timezone
 from ..models.break_execution import BreakExecution
 from .break_lifecycle_service import BreakLifecycleService

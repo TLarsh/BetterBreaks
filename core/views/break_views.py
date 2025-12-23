@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework import serializers 
 from rest_framework.permissions import IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
@@ -51,6 +52,7 @@ logger = logging.getLogger(__name__)
 
 from ..serializers.break_serializers import BreakRecommendationSerializer
 from ..ml_engine.breaks_engine import generate_break_recommendation
+from core.services.break_action_service import BreakPlanService
 
 
 # --------------CREATE BREAK PLAN------------------
@@ -562,6 +564,134 @@ class BreakSuggestionListCreateView(APIView):
             )
 
 
+# class BreakPlanActionView(APIView):
+#     permission_classes = [IsAuthenticated]
+    
+#     def get_object(self, pk, user):
+#         try:
+#             return BreakPlan.objects.get(pk=pk, user=user)
+#         except BreakPlan.DoesNotExist:
+#             return None
+
+#     @break_plan_action
+#     def patch(self, request, pk):
+#         try:
+#             user = request.user
+#             break_plan = self.get_object(pk, user)
+            
+#             # If not found in BreakPlan, check BreakSuggestion
+#             if not break_plan:
+#                 try:
+#                     suggestion = BreakSuggestion.objects.get(pk=pk, user=user)
+#                 except BreakSuggestion.DoesNotExist:
+#                     return error_response(
+#                         message="Break plan/suggestion not found",
+#                         errors={"break_plan": "Break plan/suggestion not found or you don't have permission"},
+#                         status_code=status.HTTP_404_NOT_FOUND
+#                     )
+                
+#                 # Prevent duplicate addition if already accepted
+#                 if suggestion.is_accepted:
+#                     return error_response(
+#                         message="This suggested break has already been accepted.",
+#                         errors={"break_suggestion": "Already accepted and added to break plan."},
+#                         status_code=status.HTTP_409_CONFLICT
+#                     )
+                
+#                 # Validate the action
+#                 serializer = BreakPlanActionSerializer(data=request.data, context={'break_plan': None})
+#                 if not serializer.is_valid():
+#                     return error_response(
+#                         message="Invalid action",
+#                         errors=serializer.errors,
+#                         status_code=status.HTTP_400_BAD_REQUEST
+#                     )
+                
+#                 action = serializer.validated_data['action']
+#                 reason = serializer.validated_data.get('reason', '')
+
+#                 # Only create BreakPlan if action is 'accept'
+#                 if action == 'accept':
+#                     exists = BreakPlan.objects.filter(
+#                         user=user,
+#                         startDate=datetime.combine(suggestion.start_date, time.min),
+#                         endDate=datetime.combine(suggestion.end_date, time.max)
+#                     ).exists()
+#                     if exists:
+#                         return error_response(
+#                             message="Break plan already exists for these dates",
+#                             errors={"break_plan": "Duplicate break plan"},
+#                             status_code=status.HTTP_409_CONFLICT
+#                         )
+#                     # Create BreakPlan from suggestion
+#                     break_plan = BreakPlan.objects.create(
+#                         user=user,
+#                         leave_balance=LeaveBalance.objects.filter(user=user).first(),
+#                         startDate=datetime.combine(suggestion.start_date, time.min),
+#                         endDate=datetime.combine(suggestion.end_date, time.max),
+#                         description=suggestion.description,
+#                         status='pending',
+#                     )
+#                     # Mark suggestion as accepted
+#                     suggestion.is_accepted = True
+#                     suggestion.save(update_fields=["is_accepted"])
+#                     return success_response(
+#                         message="Break plan created from suggestion",
+#                         data=BreakPlanSerializer(break_plan).data,
+#                         status_code=status.HTTP_201_CREATED
+#                     )
+#                 else:
+#                     return error_response(
+#                         message="Only 'accept' action is supported for suggestions",
+#                         errors={"action": "Invalid action for suggestion"},
+#                         status_code=status.HTTP_400_BAD_REQUEST
+#                     )
+            
+#             # If found in BreakPlan, proceed as before
+#             serializer = BreakPlanActionSerializer(data=request.data, context={'break_plan': break_plan})
+#             if not serializer.is_valid():
+#                 return error_response(
+#                     message="Invalid action",
+#                     errors=serializer.errors,
+#                     status_code=status.HTTP_400_BAD_REQUEST
+#                 )
+            
+#             action = serializer.validated_data['action']
+#             reason = serializer.validated_data.get('reason', '')
+            
+#             action_to_status = {
+#                 'approve': 'approved',
+#                 'reject': 'rejected',
+#                 'take': 'taken',
+#                 'miss': 'missed',
+#                 'cancel': 'cancelled'
+#             }
+            
+#             if action in action_to_status:
+#                 break_plan.status = action_to_status[action]
+#                 if reason:
+#                     break_plan.description = f"{break_plan.description}\n\nAction: {action}\nReason: {reason}"
+#                 break_plan.save()
+#                 return success_response(
+#                     message=f"Break successfully {action_to_status[action]}",
+#                     data=BreakPlanSerializer(break_plan).data
+#                 )
+#             else:
+#                 return error_response(
+#                     message="Invalid action",
+#                     errors={"action": "Action not supported"},
+#                     status_code=status.HTTP_400_BAD_REQUEST
+#                 )
+            
+#         except Exception as e:
+#             return error_response(
+#                 message="Failed to update break plan",
+#                 errors={"detail": str(e)},
+#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+#             )
+
+
+
 class BreakPlanActionView(APIView):
     permission_classes = [IsAuthenticated]
     
@@ -575,118 +705,45 @@ class BreakPlanActionView(APIView):
     def patch(self, request, pk):
         try:
             user = request.user
-            break_plan = self.get_object(pk, user)
-            
-            # If not found in BreakPlan, check BreakSuggestion
-            if not break_plan:
-                try:
-                    suggestion = BreakSuggestion.objects.get(pk=pk, user=user)
-                except BreakSuggestion.DoesNotExist:
-                    return error_response(
-                        message="Break plan/suggestion not found",
-                        errors={"break_plan": "Break plan/suggestion not found or you don't have permission"},
-                        status_code=status.HTTP_404_NOT_FOUND
-                    )
-                
-                # Prevent duplicate addition if already accepted
-                if suggestion.is_accepted:
-                    return error_response(
-                        message="This suggested break has already been accepted.",
-                        errors={"break_suggestion": "Already accepted and added to break plan."},
-                        status_code=status.HTTP_409_CONFLICT
-                    )
-                
-                # Validate the action
-                serializer = BreakPlanActionSerializer(data=request.data, context={'break_plan': None})
-                if not serializer.is_valid():
-                    return error_response(
-                        message="Invalid action",
-                        errors=serializer.errors,
-                        status_code=status.HTTP_400_BAD_REQUEST
-                    )
-                
-                action = serializer.validated_data['action']
-                reason = serializer.validated_data.get('reason', '')
-
-                # Only create BreakPlan if action is 'accept'
-                if action == 'accept':
-                    exists = BreakPlan.objects.filter(
-                        user=user,
-                        startDate=datetime.combine(suggestion.start_date, time.min),
-                        endDate=datetime.combine(suggestion.end_date, time.max)
-                    ).exists()
-                    if exists:
-                        return error_response(
-                            message="Break plan already exists for these dates",
-                            errors={"break_plan": "Duplicate break plan"},
-                            status_code=status.HTTP_409_CONFLICT
-                        )
-                    # Create BreakPlan from suggestion
-                    break_plan = BreakPlan.objects.create(
-                        user=user,
-                        leave_balance=LeaveBalance.objects.filter(user=user).first(),
-                        startDate=datetime.combine(suggestion.start_date, time.min),
-                        endDate=datetime.combine(suggestion.end_date, time.max),
-                        description=suggestion.description,
-                        status='pending',
-                    )
-                    # Mark suggestion as accepted
-                    suggestion.is_accepted = True
-                    suggestion.save(update_fields=["is_accepted"])
-                    return success_response(
-                        message="Break plan created from suggestion",
-                        data=BreakPlanSerializer(break_plan).data,
-                        status_code=status.HTTP_201_CREATED
-                    )
-                else:
-                    return error_response(
-                        message="Only 'accept' action is supported for suggestions",
-                        errors={"action": "Invalid action for suggestion"},
-                        status_code=status.HTTP_400_BAD_REQUEST
-                    )
-            
-            # If found in BreakPlan, proceed as before
-            serializer = BreakPlanActionSerializer(data=request.data, context={'break_plan': break_plan})
-            if not serializer.is_valid():
-                return error_response(
-                    message="Invalid action",
-                    errors=serializer.errors,
-                    status_code=status.HTTP_400_BAD_REQUEST
-                )
-            
-            action = serializer.validated_data['action']
-            reason = serializer.validated_data.get('reason', '')
-            
-            action_to_status = {
-                'approve': 'approved',
-                'reject': 'rejected',
-                'take': 'taken',
-                'miss': 'missed',
-                'cancel': 'cancelled'
-            }
-            
-            if action in action_to_status:
-                break_plan.status = action_to_status[action]
-                if reason:
-                    break_plan.description = f"{break_plan.description}\n\nAction: {action}\nReason: {reason}"
-                break_plan.save()
+            result = BreakPlanService.handle_action(user, pk, request.data)
+            bp = result["break_plan"]
+            if result.get("created"):
                 return success_response(
-                    message=f"Break successfully {action_to_status[action]}",
-                    data=BreakPlanSerializer(break_plan).data
+                    message="Break plan created from suggestion",
+                    data=BreakPlanSerializer(bp).data,
+                    status_code=status.HTTP_201_CREATED
                 )
             else:
-                return error_response(
-                    message="Invalid action",
-                    errors={"action": "Action not supported"},
-                    status_code=status.HTTP_400_BAD_REQUEST
+                return success_response(
+                    message=f"Break successfully {bp.status}",
+                    data=BreakPlanSerializer(bp).data
                 )
-            
+
+        except BreakPlan.DoesNotExist:
+            return error_response(
+                message="Break plan/suggestion not found",
+                errors={"break_plan": "Break plan/suggestion not found or you don't have permission"},
+                status_code=status.HTTP_404_NOT_FOUND
+            )
+        except serializers.ValidationError as ve:
+            return error_response(
+                message="Invalid action",
+                errors=ve.detail if hasattr(ve, "detail") else ve.args,
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+        except ValueError as ve:
+            return error_response(
+                message=str(ve),
+                errors={"detail": str(ve)},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
         except Exception as e:
             return error_response(
                 message="Failed to update break plan",
                 errors={"detail": str(e)},
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
 
 class BreakLogListCreateView(APIView):
     permission_classes = [IsAuthenticated]
