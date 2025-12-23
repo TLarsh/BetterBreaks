@@ -5,6 +5,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from ..models.preference_models import UserNotificationPreference
+from ..models.notification_models import Notification
 from ..models.user_models import User
 
 logger = logging.getLogger(__name__)
@@ -29,9 +30,7 @@ class NotificationService:
         message: str,
         metadata: Optional[dict] = None,
     ) -> None:
-        """
-        Main entry point.
-        """
+
         prefs = NotificationService._get_preferences(user)
 
         if not prefs:
@@ -42,11 +41,37 @@ class NotificationService:
             logger.info(f"Notification '{event}' disabled for user {user.id}")
             return
 
+        # ---- PUSH ----
         if prefs.pushEnabled:
-            NotificationService._send_push(user, title, message, metadata)
+            notif = Notification.objects.create(
+                user=user,
+                event=event,
+                title=title,
+                message=message,
+                channel="push",
+                metadata=metadata or {},
+            )
+            try:
+                NotificationService._send_push(user, title, message, metadata)
+                notif.mark_sent()
+            except Exception as e:
+                notif.mark_failed(str(e))
 
+        # ---- EMAIL ----
         if prefs.emailEnabled:
-            NotificationService._send_email(user, title, message)
+            notif = Notification.objects.create(
+                user=user,
+                event=event,
+                title=title,
+                message=message,
+                channel="email",
+                metadata=metadata or {},
+            )
+            try:
+                NotificationService._send_email(user, title, message)
+                notif.mark_sent()
+            except Exception as e:
+                notif.mark_failed(str(e))
 
     # ============================
     # Event rules
