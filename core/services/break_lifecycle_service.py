@@ -40,8 +40,10 @@ class BreakLifecycleService:
             title="Break completed 🎉",
             message="Nice work! Taking breaks helps your productivity and wellbeing.",
             metadata={
+                "break_id": str(break_exec.id),
                 "start": break_exec.actual_start.isoformat(),
                 "end": break_exec.actual_end.isoformat() if break_exec.actual_end else None,
+                "date": break_date.isoformat(),
             },
         )
 
@@ -65,9 +67,10 @@ class BreakLifecycleService:
         NotificationService.notify(
             user=break_exec.user,
             event=BREAK_MISSED,
-            title="You missed a planned break",
+            title="You missed a break 😕",
             message="Skipping breaks can impact your wellbeing. Let’s plan the next one better.",
             metadata={
+                "break_id": str(break_exec.id),
                 "recommended_start": break_exec.recommended_start.isoformat(),
                 "recommended_end": break_exec.recommended_end.isoformat(),
             },
