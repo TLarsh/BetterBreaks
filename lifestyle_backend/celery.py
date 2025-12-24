@@ -33,7 +33,11 @@ app.conf.beat_schedule = {
     #     "schedule": crontab(hour=2, minute=0),
     # },
     "daily-optimization-snapshot": {
-        "task": "app.tasks.optimization_tasks.recalculate_daily_optimization",
+        "task": "core.tasks.optimization_tasks.recalculate_daily_optimization",
         "schedule": crontab(hour=3, minute=0),
     },
+    "break-reminders-every-5-mins": {
+        "task": "core.tasks.notification_tasks.send_break_reminders",
+        "schedule": 300,
+    }
 }
