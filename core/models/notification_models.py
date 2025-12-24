@@ -40,7 +40,6 @@ class Notification(models.Model):
     )
 
     event = models.CharField(max_length=50, choices=EVENT_CHOICES)
-
     title = models.CharField(max_length=255)
     message = models.TextField()
 
@@ -56,6 +55,9 @@ class Notification(models.Model):
         default="pending",
     )
 
+    is_read = models.BooleanField(default=False)
+    read_at = models.DateTimeField(null=True, blank=True)
+
     metadata = models.JSONField(default=dict, blank=True)
 
     sent_at = models.DateTimeField(null=True, blank=True)
@@ -68,10 +70,15 @@ class Notification(models.Model):
         indexes = [
             models.Index(fields=["user", "event"]),
             models.Index(fields=["status"]),
+            models.Index(fields=["user", "is_read"]), 
         ]
 
     def __str__(self):
         return f"{self.user.email} | {self.event} | {self.status}"
+
+    # =========================
+    # Delivery lifecycle
+    # =========================
 
     def mark_sent(self):
         self.status = "sent"
@@ -82,3 +89,13 @@ class Notification(models.Model):
         self.status = "failed"
         self.error_message = error
         self.save(update_fields=["status", "error_message"])
+
+    # =========================
+    # User interaction
+    # =========================
+
+    def mark_read(self):
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save(update_fields=["is_read", "read_at"])

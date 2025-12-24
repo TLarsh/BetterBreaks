@@ -26,5 +26,6 @@ urlpatterns = [
     path('', include('core.urls.weather_urls')),
     path('', include('core.urls.recommendation_urls')), # the actual recommendation endpoints
     # path('', include('core.urls.break_recomendation_urls')),
+    path('', include('core.urls.notification_urls')),
       # Include core app URLs
 ]

@@ -92,15 +92,15 @@ schema_view = get_schema_view(
     # url="http://127.0.0.1:8000//",
     permission_classes=(permissions.AllowAny,),
 )
-from .swagger_api_fe import (
-    schedule_get_schema, 
-    schedule_post_schema, 
-    google_login_schema, 
-    facebook_login_schema, 
-    twitter_login_schema,
-    mood_checkin_schema,
-    mood_history_schema,
-)
+# from .swagger_api_fe import (
+#     schedule_get_schema, 
+#     schedule_post_schema, 
+#     google_login_schema, 
+#     facebook_login_schema, 
+#     twitter_login_schema,
+#     mood_checkin_schema,
+#     mood_history_schema,
+# )
 
 
 # Removed router as we're now using APIViews instead of ViewSets

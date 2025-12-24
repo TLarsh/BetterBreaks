@@ -7,6 +7,7 @@ from django.utils import timezone
 from ..models.preference_models import UserNotificationPreference
 from ..models.notification_models import Notification
 from ..models.user_models import User
+from django.shortcuts import get_object_or_404
 
 logger = logging.getLogger(__name__)
 
@@ -24,54 +25,46 @@ class NotificationService:
     @staticmethod
     def notify(
         *,
-        user: User,
-        event: str,
-        title: str,
-        message: str,
-        metadata: Optional[dict] = None,
+        user,
+        event,
+        title,
+        message,
+        metadata=None,
     ) -> None:
 
         prefs = NotificationService._get_preferences(user)
 
         if not prefs:
-            logger.info(f"No notification preferences for user {user.id}")
+            logger.info(f"No preferences for user {user.id}")
             return
 
         if not NotificationService._event_allowed(event, prefs):
-            logger.info(f"Notification '{event}' disabled for user {user.id}")
             return
 
-        # ---- PUSH ----
-        if prefs.pushEnabled:
-            notif = Notification.objects.create(
-                user=user,
-                event=event,
-                title=title,
-                message=message,
-                channel="push",
-                metadata=metadata or {},
-            )
-            try:
-                NotificationService._send_push(user, title, message, metadata)
-                notif.mark_sent()
-            except Exception as e:
-                notif.mark_failed(str(e))
+        # SYSTEM notification (always)
+        notification = Notification.objects.create(
+            user=user,
+            event=event,
+            title=title,
+            message=message,
+            metadata=metadata or {},
+            channel="system",
+            status="pending",
+        )
 
-        # ---- EMAIL ----
-        if prefs.emailEnabled:
-            notif = Notification.objects.create(
-                user=user,
-                event=event,
-                title=title,
-                message=message,
-                channel="email",
-                metadata=metadata or {},
-            )
-            try:
+        try:
+            # PUSH
+            if prefs.pushEnabled:
+                NotificationService._send_push(user, title, message, metadata)
+
+            # EMAIL
+            if prefs.emailEnabled:
                 NotificationService._send_email(user, title, message)
-                notif.mark_sent()
-            except Exception as e:
-                notif.mark_failed(str(e))
+
+            notification.mark_sent()
+
+        except Exception as e:
+            notification.mark_failed(str(e))
 
     # ============================
     # Event rules
@@ -146,3 +139,43 @@ class NotificationService:
             return user.notification_preferences
         except UserNotificationPreference.DoesNotExist:
             return None
+
+
+
+
+
+
+class NotificationCRUDService:
+
+    @staticmethod
+    def list_for_user(user):
+        return Notification.objects.filter(user=user)
+
+    @staticmethod
+    def get_and_mark_read(user, notification_id):
+        notification = get_object_or_404(
+            Notification,
+            id=notification_id,
+            user=user
+        )
+        notification.mark_read()
+        return notification
+
+    @staticmethod
+    def mark_all_read(user):
+        Notification.objects.filter(
+            user=user,
+            is_read=False
+        ).update(
+            is_read=True,
+            read_at=timezone.now()
+        )
+
+    @staticmethod
+    def delete(user, notification_id):
+        Notification.objects.filter(
+            id=notification_id,
+            user=user
+        ).delete()
+
+
