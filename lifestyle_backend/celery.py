@@ -39,5 +39,9 @@ app.conf.beat_schedule = {
     "break-reminders-every-5-mins": {
         "task": "core.tasks.notification_tasks.send_break_reminders",
         "schedule": 300,
-    }
+    },
+    "send-weekly-digest": {
+        "task": "core.tasks.notification_tasks.send_weekly_digest",
+        "schedule": crontab(day_of_week=1, hour=1, minute=0),  # every Monday at 1:00 AM
+    },
 }

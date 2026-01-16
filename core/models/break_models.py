@@ -198,7 +198,7 @@ class BreakPlan(models.Model):
             )
         
         # Check for Break Pro badge (based on number of breaks)
-        if recent_breaks >= 4:  # If user has taken at least 4 breaks in the last 30 days
+        if recent_breaks >= 4:
             Badge.objects.get_or_create(
                 user=self.user,
                 badge_type='break_pro',
@@ -225,7 +225,7 @@ class BreakPlan(models.Model):
         )
 
 
-# Break Suggestion model for personalized break recommendations
+# ######## Break Suggestion model f#############################
 class BreakSuggestion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='break_suggestions')

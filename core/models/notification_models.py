@@ -5,10 +5,7 @@ import uuid
 
 
 class Notification(models.Model):
-    """
-    Persistent notification record.
-    Used for audit, retries, inbox, analytics.
-    """
+   
 
     STATUS_CHOICES = (
         ("pending", "Pending"),

@@ -9,6 +9,9 @@ from django.contrib.auth import get_user_model
 from .social_base_login_views import BaseSocialLoginView
 from drf_yasg.utils import swagger_auto_schema
 
+from ..models.leave_balance_models import LeaveBalance
+from ..models.preference_models import BreakPreferences
+from ..models.break_models import BreakPlan
 
 from dateutil.parser import isoparse as date_parser
 from django.contrib.auth.password_validation import validate_password
@@ -115,6 +118,12 @@ class LoginView(APIView):
                 token_valid=True,
             )
 
+            onboarding_completed = bool(
+            LeaveBalance.objects.filter(user=user).exists()
+            and BreakPreferences.objects.filter(user=user).exists()
+            and BreakPlan.objects.filter(user=user).exists()
+        )
+
             return success_response(
                 message="Login successful",
                 data={
@@ -122,6 +131,7 @@ class LoginView(APIView):
                     "access": tokens["access"],
                     "email": user.email,
                     "full_name": user.full_name,
+                    "onboarding_completed": onboarding_completed,
                 }
             )
 

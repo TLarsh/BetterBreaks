@@ -5,7 +5,7 @@ from django.utils import timezone
 from .user_models import User
 
 
-######## Badge Models #############################
+
 class Badge(models.Model):
     BADGE_TYPES = [
         ('weekend_breaker', 'Weekend Breaker'),
@@ -36,5 +36,5 @@ class Badge(models.Model):
 
     @property
     def name(self):
-        """Human-readable badge name."""
+     
         return self.get_badge_type_display()

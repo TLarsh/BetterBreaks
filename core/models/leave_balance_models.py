@@ -19,10 +19,7 @@ class LeaveBalance(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def refresh_balance_if_due(self):
-        """
-        Explicitly refresh annual leave balance if today >= refresh date.
-        Must be called manually, not on every save().
-        """
+        
         today = date.today()
         if today >= self.anual_leave_refresh_date:
             original_total = self.anual_leave_balance + self.already_used_balance

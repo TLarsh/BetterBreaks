@@ -5,7 +5,7 @@ from django.utils import timezone
 from .user_models import User
 
 
-# Dates Table 
+############### Dates Table 
 class DateEntry(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -47,7 +47,7 @@ class SpecialDate(models.Model):
     def __str__(self):
         return f"{self.title} - {self.date}"
     
-# Blackouts Dates Table
+########## Blackouts Dates Table ###########
    
 class BlackoutDate(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)  

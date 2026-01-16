@@ -10,11 +10,14 @@ class BreakPreferences(models.Model):
         ('mix_of_both', 'Mix of Both'),
     ]
 
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='break_preferences'
     )
+
+
     preference = models.CharField(max_length=30, choices=PREFERENCES)
     weather_based_recommendation = models.BooleanField(default=False)
     to_be_confirmed = models.BooleanField(default=False)

@@ -3,7 +3,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-
+from ..models.notification_models import Notification
 from ..services.notification_service import NotificationCRUDService
 from ..serializers.notification_serializers import NotificationSerializer
 
@@ -40,3 +40,22 @@ class NotificationDeleteAPIView(APIView):
     def delete(self, request, pk):
         NotificationCRUDService.delete(request.user, pk)
         return Response(status=204)
+
+
+
+class UnreadNotificationCountAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        count = Notification.objects.filter(
+            user=request.user,
+            channel="system",
+            is_read=False,
+        ).count()
+
+        return Response({
+            "message": "Unread notifications count",
+            "status": True,
+            "data": {"unread_count": count},
+            "errors": None,
+        })

@@ -22,7 +22,7 @@ class PublicHoliday(models.Model):
     date = models.DateField(null=False, blank=False)
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     google_calendar_event_id = models.CharField(max_length=255, null=True, blank=True)
-    is_observed = models.BooleanField(default=False)  # Tracks if user took a break on this holiday
+    is_observed = models.BooleanField(default=False)
     calendar = models.ForeignKey(PublicHolidayCalendar, on_delete=models.CASCADE, related_name='holidays', null=True)
 
     class Meta:

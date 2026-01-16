@@ -43,14 +43,14 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(auto_now_add=True)  # Added this field.
-    google_oauth_token = models.CharField(max_length=255, null=True, blank=True)  # Addede this field
+    date_joined = models.DateTimeField(auto_now_add=True)
+    google_oauth_token = models.CharField(max_length=255, null=True, blank=True)
     
     # Gamification fields
-    total_break_score = models.PositiveIntegerField(default=0)  # Accumulated break score
-    total_badges = models.PositiveIntegerField(default=0)  # Total badges earned
-    highest_streak = models.PositiveIntegerField(default=0)  # Highest streak achieved
-    last_optimization_score = models.FloatField(default=0.0)  # Last optimization score
+    total_break_score = models.PositiveIntegerField(default=0)
+    total_badges = models.PositiveIntegerField(default=0)
+    highest_streak = models.PositiveIntegerField(default=0)
+    last_optimization_score = models.FloatField(default=0.0)
 
     objects = UserManager()
 
@@ -76,7 +76,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
         calendar, _ = PublicHolidayCalendar.objects.get_or_create(
             user=self,
-            defaults={"country_code": "US"}  #  can be replaced with logic from timezone
+            defaults={"country_code": "US"}
         )
         return calendar
 
@@ -90,10 +90,10 @@ class SocialAccount(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(User, related_name="social_accounts", on_delete=models.CASCADE)
     provider = models.CharField(max_length=20, choices=PROVIDER_CHOICES)
-    provider_id = models.CharField(max_length=255, db_index=True)  # unique ID from provider
+    provider_id = models.CharField(max_length=255, db_index=True)
     email = models.EmailField(blank=True, null=True)
     extra_data = models.JSONField(default=dict, blank=True)
-    last_login = models.DateTimeField(null=True, blank=True)  # track last login from this provider
+    last_login = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

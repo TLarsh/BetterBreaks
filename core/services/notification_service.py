@@ -1,14 +1,15 @@
 import logging
 from typing import Optional
 
-from django.conf import settings
 from django.utils import timezone
 
 from ..models.preference_models import UserNotificationPreference
 from ..models.notification_models import Notification
 from ..models.user_models import User
-from django.shortcuts import get_object_or_404
 
+from ..utils.email_utils import send_notification_email
+from ..utils.firebase_utils import send_firebase_push
+from django.shortcuts import get_object_or_404
 logger = logging.getLogger(__name__)
 
 
@@ -25,11 +26,11 @@ class NotificationService:
     @staticmethod
     def notify(
         *,
-        user,
-        event,
-        title,
-        message,
-        metadata=None,
+        user: User,
+        event: str,
+        title: str,
+        message: str,
+        metadata: Optional[dict] = None,
     ) -> None:
 
         prefs = NotificationService._get_preferences(user)
@@ -41,7 +42,7 @@ class NotificationService:
         if not NotificationService._event_allowed(event, prefs):
             return
 
-        # SYSTEM notification (always)
+        # SYSTEM notification (always stored)
         notification = Notification.objects.create(
             user=user,
             event=event,
@@ -55,16 +56,26 @@ class NotificationService:
         try:
             # PUSH
             if prefs.pushEnabled:
-                NotificationService._send_push(user, title, message, metadata)
+                send_firebase_push(
+                    token=getattr(user, "fcmToken", None),
+                    title=title,
+                    body=message,
+                    data=metadata,
+                )
 
             # EMAIL
             if prefs.emailEnabled:
-                NotificationService._send_email(user, title, message)
+                send_notification_email(
+                    email=user.email,
+                    title=title,
+                    message=message,
+                )
 
             notification.mark_sent()
 
         except Exception as e:
             notification.mark_failed(str(e))
+            logger.error(f"Notification failed for user {user.id}: {e}")
 
     # ============================
     # Event rules
@@ -82,54 +93,6 @@ class NotificationService:
         return mapping.get(event, False)
 
     # ============================
-    # Channels
-    # ============================
-
-    @staticmethod
-    def _send_push(user, title, message, metadata=None):
-        """
-        Push notification handler (Firebase / OneSignal / Expo).
-        """
-        try:
-            if not getattr(user, "fcmToken", None):
-                return
-
-            logger.info(f"📲 Push → {user.email}: {title}")
-
-            # 🔌 Example (pseudo)
-            # push_client.send(
-            #   token=user.fcmToken,
-            #   title=title,
-            #   body=message,
-            #   data=metadata or {}
-            # )
-
-        except Exception as e:
-            logger.error(f"Push notification failed for user {user.id}: {e}")
-
-    @staticmethod
-    def _send_email(user, title, message):
-        """
-        Email notification handler.
-        """
-        try:
-            if not user.email:
-                return
-
-            logger.info(f"📧 Email → {user.email}: {title}")
-
-            # 🔌 Example (pseudo)
-            # send_mail(
-            #   subject=title,
-            #   message=message,
-            #   from_email=settings.DEFAULT_FROM_EMAIL,
-            #   recipient_list=[user.email],
-            # )
-
-        except Exception as e:
-            logger.error(f"Email notification failed for user {user.id}: {e}")
-
-    # ============================
     # Internals
     # ============================
 
@@ -139,6 +102,7 @@ class NotificationService:
             return user.notification_preferences
         except UserNotificationPreference.DoesNotExist:
             return None
+
 
 
 
