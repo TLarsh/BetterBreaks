@@ -23,16 +23,17 @@ schedule_post_schema = swagger_auto_schema(
             "working_pattern": openapi.Schema(
                 type=openapi.TYPE_OBJECT,
                 properties={
-                    "pattern_type": openapi.Schema(type=openapi.TYPE_STRING),
+                    "pattern_type": openapi.Schema(type=openapi.TYPE_STRING, example="custom, standard, shift"),
                     "days_on": openapi.Schema(type=openapi.TYPE_INTEGER),
                     "days_off": openapi.Schema(type=openapi.TYPE_INTEGER),
                     "start_date": openapi.Schema(type=openapi.TYPE_STRING, format="date"),
-                    "rotation_pattern": openapi.Schema(type=openapi.TYPE_STRING),
+                    "rotation_pattern": openapi.Schema(type=openapi.TYPE_STRING, example="1_week, 2_weeks, 3_weeks"),
                     "shift_preview": openapi.Schema(
                         type=openapi.TYPE_ARRAY,
                         items=openapi.Items(
                             type=openapi.TYPE_ARRAY,
-                            items=openapi.Items(type=openapi.TYPE_STRING)
+                            items=openapi.Items(type=openapi.TYPE_STRING),
+                            example="ON, ON, ON, OFF, OFF, ON, ON"
                         )
                     )
                 }

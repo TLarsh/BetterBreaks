@@ -11,6 +11,8 @@ class WorkingPattern(models.Model):
         ('shift', 'Shift'),
     )
 
+    
+
     ROTATION_CHOICES = (
         ('1_week', '1 Week Rotation'),
         ('2_weeks', '2 Weeks Rotation'),

@@ -25,6 +25,8 @@ from ..docs.schedule_docs import (
 class ScheduleView(APIView):
     """
     Combined view to GET or POST WorkingPattern, BlackoutDates, and OptimizationGoals
+    📌 For "rotation_pattern" input one of the following enum; "1_week, 2_weeks, 3_weeks",
+    📌 For "shift_preview" input an array; "ON, ON, ON, OFF, OFF, ON, ON",
     """
 
     @schedule_get_schema
