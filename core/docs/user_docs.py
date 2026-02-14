@@ -2,6 +2,46 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 
+# ------- email login ------------
+
+email_login_schema = swagger_auto_schema(
+    operation_summary="Login with Email",
+    operation_description=(
+        "Authenticate a user using email and password.\n"
+        "- Provide the user's email and password.\n"
+        "- Ensure the email is registered and the password is correct."
+    ),
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            "email": openapi.Schema(type=openapi.TYPE_STRING, description="User's email address"),
+            "password": openapi.Schema(type=openapi.TYPE_STRING, description="User's password"),
+        },
+        example={
+            "email": "admin6@gmail.com",
+            "password": "admin123"
+        }
+    ),
+    responses={
+        200: openapi.Response(
+            description="Login successful",
+            examples={
+                "application/json": {
+                    "message": "Login successful",
+                    "status": "true",
+                    "data": {
+                        "refresh": "your_refresh_token",
+                        "access": "your_access_token",
+                        "email": "admin6@gmail.com",
+                        "full_name": "App Admin",
+                        "onboarding_completed": "true",
+                    },
+                    "errors": "null"
+                }
+            }
+        )
+    }
+)
 
 # ----------- GOOGLE LOGIN SCHEMA -----------
 google_login_schema = swagger_auto_schema(

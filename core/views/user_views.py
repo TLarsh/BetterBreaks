@@ -33,6 +33,7 @@ from core.docs.user_docs import (
     google_login_schema,
     facebook_login_schema,
     twitter_login_schema,
+    email_login_schema,
 )
 from core.serializers.user_serializers import (
     RegisterSerializer,
@@ -102,7 +103,8 @@ class RegisterView(APIView):
 class LoginView(APIView):
     permission_classes = [AllowAny]
 
-    @swagger_auto_schema(request_body=LoginSerializer)
+    # @swagger_auto_schema(request_body=LoginSerializer)
+    @email_login_schema
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
