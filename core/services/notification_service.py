@@ -1,3 +1,117 @@
+# import logging
+# from typing import Optional
+
+# from django.utils import timezone
+
+# from ..models.preference_models import UserNotificationPreference
+# from ..models.notification_models import Notification
+# from ..models.user_models import User
+
+# from ..utils.email_utils import send_notification_email
+# from ..utils.firebase_utils import send_firebase_push
+# from django.shortcuts import get_object_or_404
+# logger = logging.getLogger(__name__)
+
+
+# class NotificationService:
+#     """
+#     Central notification dispatcher.
+#     Handles preferences, channels, and delivery.
+#     """
+
+#     # ============================
+#     # Public API
+#     # ============================
+
+#     @staticmethod
+#     def notify(
+#         *,
+#         user: User,
+#         event: str,
+#         title: str,
+#         message: str,
+#         metadata: Optional[dict] = None,
+#     ) -> None:
+
+#         prefs = NotificationService._get_preferences(user)
+
+#         # SYSTEM notification (always stored)
+#         notification = Notification.objects.create(
+#             user=user,
+#             event=event,
+#             title=title,
+#             message=message,
+#             metadata=metadata or {},
+#             channel="system",
+#             status="pending",
+#         )
+
+#         if not prefs:
+#             logger.info(f"No preferences for user {user.id}")
+#             return
+
+#         if not NotificationService._event_allowed(event, prefs):
+#             return
+
+        
+
+#         try:
+#             # PUSH
+#             if prefs.pushEnabled:
+#                 send_firebase_push(
+#                     token=getattr(user, "fcmToken", None),
+#                     title=title,
+#                     body=message,
+#                     data=metadata,
+#                 )
+
+#             # EMAIL
+#             if prefs.emailEnabled:
+#                 send_notification_email(
+#                     email=user.email,
+#                     title=title,
+#                     message=message,
+#                 )
+
+#             notification.mark_sent()
+
+#         except Exception as e:
+#             notification.mark_failed(str(e))
+#             logger.error(f"Notification failed for user {user.id}: {e}")
+
+#     # ============================
+#     # Event rules
+#     # ============================
+
+#     @staticmethod
+#     def _event_allowed(event: str, prefs: UserNotificationPreference) -> bool:
+#         mapping = {
+#             "welcome": True,
+#             "break_reminder": prefs.breaksReminder,
+#             "break_suggested": prefs.suggestions,
+#             "break_deadline": prefs.deadlineAlerts,
+#             "break_missed": prefs.deadlineAlerts,
+#             "weekly_digest": prefs.weeklyDigest,
+#         }
+#         return mapping.get(event, False)
+
+#     # ============================
+#     # Internals
+#     # ============================
+
+#     @staticmethod
+#     def _get_preferences(user) -> Optional[UserNotificationPreference]:
+#         try:
+#             return user.notification_preferences
+#         except UserNotificationPreference.DoesNotExist:
+#             return None
+
+
+
+
+
+
+
 import logging
 from typing import Optional
 
@@ -6,10 +120,13 @@ from django.utils import timezone
 from ..models.preference_models import UserNotificationPreference
 from ..models.notification_models import Notification
 from ..models.user_models import User
+from ..models.device_models import DeviceToken
 
 from ..utils.email_utils import send_notification_email
 from ..utils.firebase_utils import send_firebase_push
+
 from django.shortcuts import get_object_or_404
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,10 +135,6 @@ class NotificationService:
     Central notification dispatcher.
     Handles preferences, channels, and delivery.
     """
-
-    # ============================
-    # Public API
-    # ============================
 
     @staticmethod
     def notify(
@@ -35,14 +148,8 @@ class NotificationService:
 
         prefs = NotificationService._get_preferences(user)
 
-        if not prefs:
-            logger.info(f"No preferences for user {user.id}")
-            return
 
-        if not NotificationService._event_allowed(event, prefs):
-            return
-
-        # SYSTEM notification (always stored)
+         # SYSTEM notification (always stored)
         notification = Notification.objects.create(
             user=user,
             event=event,
@@ -53,29 +160,63 @@ class NotificationService:
             status="pending",
         )
 
-        try:
-            # PUSH
-            if prefs.pushEnabled:
-                send_firebase_push(
-                    token=getattr(user, "fcmToken", None),
-                    title=title,
-                    body=message,
-                    data=metadata,
-                )
+        if not prefs:
+            logger.info(f"No preferences for user {user.id}")
+            return
 
-            # EMAIL
-            if prefs.emailEnabled:
+        if not NotificationService._event_allowed(event, prefs):
+            return
+
+       
+
+        errors = []
+
+        # =====================
+        # PUSH NOTIFICATIONS
+        # =====================
+        if prefs.pushEnabled:
+            try:
+                tokens = NotificationService._get_user_tokens(user)
+
+                for token in tokens:
+                    try:
+                        send_firebase_push(
+                            token=token,
+                            title=title,
+                            body=message,
+                            data={
+                                "notification_id": str(notification.id),
+                                "event": event,
+                                **(metadata or {})
+                            },
+                        )
+                    except Exception as e:
+                        errors.append(f"Push failed: {str(e)}")
+
+            except Exception as e:
+                errors.append(f"Push setup failed: {str(e)}")
+
+        # =====================
+        # EMAIL NOTIFICATIONS
+        # =====================
+        if prefs.emailEnabled:
+            try:
                 send_notification_email(
                     email=user.email,
                     title=title,
                     message=message,
                 )
+            except Exception as e:
+                errors.append(f"Email failed: {str(e)}")
 
+        # =====================
+        # FINAL STATUS
+        # =====================
+        if errors:
+            notification.mark_failed("; ".join(errors))
+            logger.error(f"Notification failed for user {user.id}: {errors}")
+        else:
             notification.mark_sent()
-
-        except Exception as e:
-            notification.mark_failed(str(e))
-            logger.error(f"Notification failed for user {user.id}: {e}")
 
     # ============================
     # Event rules
@@ -104,9 +245,26 @@ class NotificationService:
         except UserNotificationPreference.DoesNotExist:
             return None
 
+    @staticmethod
+    def _get_user_tokens(user):
+        """
+        Supports both:
+        - New DeviceToken model (preferred)
+        - Legacy single fcmToken field (fallback)
+        """
+        tokens = []
 
+        # Preferred: multiple devices
+        if hasattr(user, "device_tokens"):
+            tokens.extend(
+                user.device_tokens.values_list("token", flat=True)
+            )
 
+        #  Fallback: single token on user
+        if getattr(user, "fcmToken", None):
+            tokens.append(user.fcmToken)
 
+        return list(set(tokens))  # remove duplicates
 
 
 
@@ -148,154 +306,3 @@ class NotificationCRUDService:
 
 
 
-
-# import logging
-# from typing import Optional
-
-# from django.utils import timezone
-
-# from ..models.preference_models import UserNotificationPreference
-# from ..models.notification_models import Notification
-# from ..models.user_models import User
-# from ..models.device_models import DeviceToken
-
-# from ..utils.email_utils import send_notification_email
-# from ..utils.firebase_utils import send_firebase_push
-
-# from django.shortcuts import get_object_or_404
-
-# logger = logging.getLogger(__name__)
-
-
-# class NotificationService:
-#     """
-#     Central notification dispatcher.
-#     Handles preferences, channels, and delivery.
-#     """
-
-#     @staticmethod
-#     def notify(
-#         *,
-#         user: User,
-#         event: str,
-#         title: str,
-#         message: str,
-#         metadata: Optional[dict] = None,
-#     ) -> None:
-
-#         prefs = NotificationService._get_preferences(user)
-
-#         if not prefs:
-#             logger.info(f"No preferences for user {user.id}")
-#             return
-
-#         if not NotificationService._event_allowed(event, prefs):
-#             return
-
-#         # SYSTEM notification (always stored)
-#         notification = Notification.objects.create(
-#             user=user,
-#             event=event,
-#             title=title,
-#             message=message,
-#             metadata=metadata or {},
-#             channel="system",
-#             status="pending",
-#         )
-
-#         errors = []
-
-#         # =====================
-#         # PUSH NOTIFICATIONS
-#         # =====================
-#         if prefs.pushEnabled:
-#             try:
-#                 tokens = NotificationService._get_user_tokens(user)
-
-#                 for token in tokens:
-#                     try:
-#                         send_firebase_push(
-#                             token=token,
-#                             title=title,
-#                             body=message,
-#                             data={
-#                                 "notification_id": str(notification.id),
-#                                 "event": event,
-#                                 **(metadata or {})
-#                             },
-#                         )
-#                     except Exception as e:
-#                         errors.append(f"Push failed: {str(e)}")
-
-#             except Exception as e:
-#                 errors.append(f"Push setup failed: {str(e)}")
-
-#         # =====================
-#         # EMAIL NOTIFICATIONS
-#         # =====================
-#         if prefs.emailEnabled:
-#             try:
-#                 send_notification_email(
-#                     email=user.email,
-#                     title=title,
-#                     message=message,
-#                 )
-#             except Exception as e:
-#                 errors.append(f"Email failed: {str(e)}")
-
-#         # =====================
-#         # FINAL STATUS
-#         # =====================
-#         if errors:
-#             notification.mark_failed("; ".join(errors))
-#             logger.error(f"Notification failed for user {user.id}: {errors}")
-#         else:
-#             notification.mark_sent()
-
-#     # ============================
-#     # Event rules
-#     # ============================
-
-#     @staticmethod
-#     def _event_allowed(event: str, prefs: UserNotificationPreference) -> bool:
-#         mapping = {
-#             "welcome": True,
-#             "break_reminder": prefs.breaksReminder,
-#             "break_suggested": prefs.suggestions,
-#             "break_deadline": prefs.deadlineAlerts,
-#             "break_missed": prefs.deadlineAlerts,
-#             "weekly_digest": prefs.weeklyDigest,
-#         }
-#         return mapping.get(event, False)
-
-#     # ============================
-#     # Internals
-#     # ============================
-
-#     @staticmethod
-#     def _get_preferences(user) -> Optional[UserNotificationPreference]:
-#         try:
-#             return user.notification_preferences
-#         except UserNotificationPreference.DoesNotExist:
-#             return None
-
-#     @staticmethod
-#     def _get_user_tokens(user):
-#         """
-#         Supports both:
-#         - New DeviceToken model (preferred)
-#         - Legacy single fcmToken field (fallback)
-#         """
-#         tokens = []
-
-#         # Preferred: multiple devices
-#         if hasattr(user, "device_tokens"):
-#             tokens.extend(
-#                 user.device_tokens.values_list("token", flat=True)
-#             )
-
-#         #  Fallback: single token on user
-#         if getattr(user, "fcmToken", None):
-#             tokens.append(user.fcmToken)
-
-#         return list(set(tokens))  # remove duplicates
