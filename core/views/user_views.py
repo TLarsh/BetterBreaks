@@ -129,10 +129,10 @@ class LoginView(APIView):
             return success_response(
                 message="Login successful",
                 data={
-                    "refresh": tokens["refresh"],
-                    "access": tokens["access"],
                     "email": user.email,
                     "full_name": user.full_name,
+                    "access": tokens["access"],
+                    "refresh": tokens["refresh"],
                     "onboarding_completed": onboarding_completed,
                 }
             )

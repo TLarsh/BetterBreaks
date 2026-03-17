@@ -7,6 +7,38 @@ from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from core.models.user_models import PasswordResetOTP, User
 import random
 from core.utils.email_utils import send_otp_email 
+from django.contrib.auth.base_user import BaseUserManager
+
+
+# class RegisterSerializer(serializers.ModelSerializer):
+#     password = serializers.CharField(write_only=True)
+#     password_confirmation = serializers.CharField(write_only=True)
+#     full_name = serializers.CharField(required=False, allow_blank=True, help_text="Optional full name")
+
+#     class Meta:
+#         model = User
+#         fields = ["email", "full_name", "password", "password_confirmation"]
+#         extra_kwargs = {
+#             "email": {"required": True, "help_text": "Email address for registration"},
+#             "password": {"help_text": "Password (will be validated against Django's password rules)"},
+#             "password_confirmation": {"help_text": "Confirm password"},
+#         }
+
+#     def validate(self, data):
+#         if data["password"] != data["password_confirmation"]:
+#             raise serializers.ValidationError({"errors": ["Passwords do not match"]})
+#         validate_password(data["password"])
+#         return data
+
+#     def create(self, validated_data):
+#         validated_data.pop("password_confirmation", None)
+#         return User.objects.create_user(
+#             email=validated_data["email"],
+#             full_name=validated_data.get("full_name"),
+#             password=validated_data["password"]
+#         )
+    
+
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -23,6 +55,9 @@ class RegisterSerializer(serializers.ModelSerializer):
             "password_confirmation": {"help_text": "Confirm password"},
         }
 
+    def validate_email(self, value):
+        return value.strip().lower()
+
     def validate(self, data):
         if data["password"] != data["password_confirmation"]:
             raise serializers.ValidationError({"errors": ["Passwords do not match"]})
@@ -36,6 +71,8 @@ class RegisterSerializer(serializers.ModelSerializer):
             full_name=validated_data.get("full_name"),
             password=validated_data["password"]
         )
+    
+
 
 class LoginSerializer(serializers.Serializer):
     """
@@ -46,10 +83,10 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField()
 
     def validate(self, data):
-        email = data["email"]
+        email = BaseUserManager.normalize_email(data["email"].strip())
         password = data["password"]
 
-        # Find user by email
+        # Find user by normalized email
         user = User.objects.filter(email=email).first()
 
         # Verify credentials
@@ -57,6 +94,27 @@ class LoginSerializer(serializers.Serializer):
             return {"user": user}
         else:
             raise serializers.ValidationError({"errors": ["Login failed"]})
+
+# class LoginSerializer(serializers.Serializer):
+#     """
+#     Serializer for user login.
+#     Accepts email and returns a token upon successful authentication.
+#     """
+#     email = serializers.EmailField()
+#     password = serializers.CharField()
+
+#     def validate(self, data):
+#         email = data["email"]
+#         password = data["password"]
+
+#         # Find user by email
+#         user = User.objects.filter(email=email).first()
+
+#         # Verify credentials
+#         if user and user.check_password(password):
+#             return {"user": user}
+#         else:
+#             raise serializers.ValidationError({"errors": ["Login failed"]})
         
 
 class LogoutSerializer(serializers.Serializer):

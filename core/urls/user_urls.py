@@ -11,6 +11,8 @@ from ..views.user_views import (
     UpdateProfileView,
     GoogleLoginView, FacebookLoginView, TwitterLoginView,
 )
+from rest_framework_simplejwt.views import TokenRefreshView
+
 
 
 urlpatterns = [
@@ -27,7 +29,7 @@ urlpatterns = [
     path("api/auth/change-email/", ChangeEmailView.as_view(), name="change-email"),
     path("api/auth/change-password/", ChangePasswordView.as_view(), name="change-password"),
 
-
+    path('api/auth/token/refresh/', TokenRefreshView.as_view()),
 
     path("api/auth/google/", GoogleLoginView.as_view(), name="google-login"),
     path("api/auth/facebook/", FacebookLoginView.as_view(), name="facebook-login"),
