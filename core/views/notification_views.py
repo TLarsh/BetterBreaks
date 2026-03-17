@@ -10,6 +10,7 @@ from ..serializers.notification_serializers import NotificationSerializer
 
 class NotificationListAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    pass
 
     def get(self, request):
         qs = NotificationCRUDService.list_for_user(request.user)

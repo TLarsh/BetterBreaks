@@ -51,6 +51,8 @@ from core.utils.responses import success_response, error_response
 from ..utils.user_utils import validate_and_create_user
 import logging
 
+from core.services.notification_service import NotificationService
+
 
 
 
@@ -69,6 +71,17 @@ class RegisterView(APIView):
     def post(self, request):
         try:
             user = validate_and_create_user(request.data)
+
+            NotificationService.notify(
+            user=user,
+            event="welcome",
+            title="Welcome to BetterBreaks! 🎉",
+            message=(
+                "We're excited to have you on board. "
+                "Start by setting up your leave balance and let us help you plan smarter breaks."
+            ),
+            metadata={}
+        )
 
             return success_response(
                 message="Registration successful",

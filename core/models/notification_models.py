@@ -20,6 +20,7 @@ class Notification(models.Model):
     )
 
     EVENT_CHOICES = (
+        ("welcome", "Welcome"),
         ("break_suggested", "Break Suggested"),
         ("break_reminder", "Break Reminder"),
         ("break_taken", "Break Taken"),
@@ -39,6 +40,7 @@ class Notification(models.Model):
     event = models.CharField(max_length=50, choices=EVENT_CHOICES)
     title = models.CharField(max_length=255)
     message = models.TextField()
+    type = models.CharField(max_length=50, blank=True, null=True)  # e.g., "info", "warning", "success"
 
     channel = models.CharField(
         max_length=20,
