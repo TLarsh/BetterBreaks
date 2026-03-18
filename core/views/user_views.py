@@ -151,7 +151,7 @@ class LoginView(APIView):
             )
 
         return error_response(
-            message="Login failed",
+            message="Incorrect email or password",
             errors=serializer.errors
         )
 

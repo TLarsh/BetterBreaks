@@ -93,7 +93,7 @@ class LoginSerializer(serializers.Serializer):
         if user and user.check_password(password):
             return {"user": user}
         else:
-            raise serializers.ValidationError({"errors": ["Login failed"]})
+            raise serializers.ValidationError({"errors": ["Incorrect email or password"]})
 
 # class LoginSerializer(serializers.Serializer):
 #     """

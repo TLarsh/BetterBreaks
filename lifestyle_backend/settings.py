@@ -135,6 +135,16 @@ SOCIALACCOUNT_PROVIDERS = {
             "secret": os.getenv("TWITTER_API_SECRET"),
             "key": ""
         }
+    },
+    'apple': {
+        'APP': {
+        'client_id': os.getenv('SOCIALACCOUNT_APPLE_CLIENT_ID'),
+        'secret': os.getenv('SOCIALACCOUNT_APPLE_SECRET'),
+        'key': os.getenv('SOCIALACCOUNT_APPLE_KEY_ID'),
+        'settings': {
+            'certificate_key': os.getenv('SOCIALACCOUNT_APPLE_SECRET'),
+            }
+        }
     }
 }
 
@@ -203,6 +213,13 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+# dj-rest-auth settings
+REST_AUTH = {
+ 'USE_JWT': True,
+ 'JWT_AUTH_COOKIE': None, # don't use cookie auth for mobile
+ 'JWT_AUTH_REFRESH_COOKIE': None,
 }
 
 LOGGING = {
@@ -313,5 +330,12 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
+
+
+SOCIALACCOUNT_APPLE_CLIENT_ID="your_apple_service_id" # e.g.com.betterbreaks.app.web-"signin"
+SOCIALACCOUNT_APPLE_SECRET="<your_apple_private_key_p8_content>"
+SOCIALACCOUNT_APPLE_KEY_ID="<your_apple_key_id>"
+SOCIALACCOUNT_APPLE_TEAM_ID="<your_apple_team_id>"
+
 
 RENDER = os.getenv("RENDER", "False") == "True"
