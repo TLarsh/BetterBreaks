@@ -16,10 +16,20 @@ email_login_schema = swagger_auto_schema(
         properties={
             "email": openapi.Schema(type=openapi.TYPE_STRING, description="User's email address"),
             "password": openapi.Schema(type=openapi.TYPE_STRING, description="User's password"),
+            "timezone": openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="User timezone (e.g. Africa/Lagos)"
+            ),
+            "coordinates": openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="User coordinates in 'lat,lng' format"
+            ),
         },
         example={
             "email": "admin6@gmail.com",
-            "password": "admin123"
+            "password": "admin123",
+            "timezone": "Africa/Lagos",
+            "coordinates": "6.5244,3.3792"
         }
     ),
     responses={

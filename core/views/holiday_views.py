@@ -174,6 +174,68 @@ from ..tasks.holiday_tasks import sync_user_holidays
 #         )
 
 
+# class HolidayView(APIView):
+#     """
+#     Get all holidays for the logged-in user (current + next year).
+#     Update user's holiday calendar country code.
+#     """
+#     permission_classes = [IsAuthenticated]
+
+#     @holiday_detail_get
+#     def get(self, request):
+#         user = request.user
+#         calendar = getattr(user, "holiday_calendar", None)
+
+#         if not calendar or not calendar.is_enabled:
+#             return error_response(
+#                 message="No holiday calendar found",
+#                 errors={"calendar": "No holiday calendar found"}
+#             )
+
+#         holidays = calendar.holidays.all().order_by("date")
+#         serializer = PublicHolidaySerializer(holidays, many=True)
+
+#         return success_response(
+#             message="Fetched holidays successfully",
+#             data=serializer.data
+#         )
+
+#     # @holiday_detail_post
+#     def post(self, request):
+#         """
+#         Update the user's holiday calendar country code and sync holidays.
+#         """
+#         user = request.user
+#         country_code = request.data.get("country_code")
+
+#         if not country_code:
+#             return error_response(
+#                 message="Country code is required",
+#                 errors={"country_code": "This field is required"},
+#                 status_code=status.HTTP_400_BAD_REQUEST
+#             )
+
+    
+#         calendar = user.get_calendar()
+
+#         # Update country code + enable calendar
+#         calendar.country_code = country_code
+#         calendar.is_enabled = True
+#         calendar.save(update_fields=["country_code", "is_enabled", "updated_at"])
+
+#         # Queue the sync task
+#         task = sync_user_holidays.delay(user.id, country_code)
+
+#         return success_response(
+#             message="Holiday calendar updated successfully",
+#             data={
+#                 "country_code": country_code,
+#                 "task_id": task.id,
+#             },
+#             status_code=status.HTTP_200_OK
+#         )
+
+
 class HolidayView(APIView):
     """
     Get all holidays for the logged-in user (current + next year).
@@ -184,6 +246,10 @@ class HolidayView(APIView):
     @holiday_detail_get
     def get(self, request):
         user = request.user
+
+        # Ensure user has a country code
+        country_code = user.resolve_and_save_country_code()
+
         calendar = getattr(user, "holiday_calendar", None)
 
         if not calendar or not calendar.is_enabled:
@@ -191,6 +257,10 @@ class HolidayView(APIView):
                 message="No holiday calendar found",
                 errors={"calendar": "No holiday calendar found"}
             )
+
+        if calendar.country_code != country_code:
+            calendar.country_code = country_code
+            calendar.save(update_fields=["country_code", "updated_at"])
 
         holidays = calendar.holidays.all().order_by("date")
         serializer = PublicHolidaySerializer(holidays, many=True)
@@ -206,16 +276,10 @@ class HolidayView(APIView):
         Update the user's holiday calendar country code and sync holidays.
         """
         user = request.user
-        country_code = request.data.get("country_code")
 
-        if not country_code:
-            return error_response(
-                message="Country code is required",
-                errors={"country_code": "This field is required"},
-                status_code=status.HTTP_400_BAD_REQUEST
-            )
+        country_code = user.resolve_and_save_country_code()
 
-    
+
         calendar = user.get_calendar()
 
         # Update country code + enable calendar
@@ -234,7 +298,6 @@ class HolidayView(APIView):
             },
             status_code=status.HTTP_200_OK
         )
-
 
 class UpcomingHolidaysView(APIView):
     """
@@ -266,10 +329,16 @@ class UpcomingHolidaysView(APIView):
 class FetchPublicHolidaysView(APIView):
     def get(self, request):
         user = request.user
-        if not user.home_location_timezone:
-            return Response({"error": "User location not set"}, status=status.HTTP_400_BAD_REQUEST)
 
-        country_code = user.home_location_timezone.split("/")[0]  # Extract country code
+        
+        country_code = user.resolve_and_save_country_code()
+
+        if not country_code:
+            return Response(
+                {"error": "Could not resolve user country"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         year = timezone.now().year
         holidays_data = fetch_public_holidays(country_code, year)
 
@@ -277,10 +346,19 @@ class FetchPublicHolidaysView(APIView):
             PublicHoliday.objects.update_or_create(
                 user=user,
                 date=holiday["date"],
-                defaults={"name": holiday["name"], "country_code": country_code}
+                defaults={
+                    "name": holiday["name"],
+                    "country_code": country_code
+                }
             )
 
-        return Response({"success": True}, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "success": True,
+                "country_code": country_code
+            },
+            status=status.HTTP_200_OK
+        )
     
 
 class ListPublicHolidaysView(APIView):

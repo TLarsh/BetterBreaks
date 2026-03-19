@@ -14,11 +14,13 @@
 
 
 from django.db.models.signals import post_save
+from django.contrib.auth.signals import user_logged_in
 from django.dispatch import receiver
 from django.conf import settings
 import logging
 from .models.holiday_models import PublicHolidayCalendar
 from .tasks.holiday_tasks import sync_user_holidays
+from .utils.contry_code_resolution import update_user_location
 
 
 
@@ -80,3 +82,17 @@ def create_calendar_and_sync(sender, instance, created, **kwargs):
 def on_break_execution_update(sender, instance, created, **kwargs):
     if instance.status == "taken":
         process_break_completion_async.delay(instance.id)
+
+
+
+@receiver(user_logged_in)
+def update_location_on_login(sender, request, user, **kwargs):
+    """
+    Automatically update user location on login.
+    """
+
+    # Try to extract from request (if frontend sends it)
+    timezone = request.headers.get("X-Timezone")
+    coords = request.headers.get("X-Coordinates")  # format: "lat,lng"
+
+    update_user_location(user, timezone=timezone, coords=coords)

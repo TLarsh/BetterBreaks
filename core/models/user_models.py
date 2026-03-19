@@ -5,6 +5,7 @@ import uuid
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 from .holiday_models import PublicHolidayCalendar
+from core.utils.contry_code_resolution import resolve_country_code
 
 
 class UserManager(BaseUserManager):
@@ -39,6 +40,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     birthday = models.DateTimeField(null=True, blank=True)
     home_location_timezone = models.CharField(max_length=100, null=True, blank=True)
     home_location_coordinates = models.CharField(max_length=255, null=True, blank=True)
+    country_code = models.CharField(max_length=5, null=True, blank=True)
     working_days_per_week = models.PositiveIntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -66,6 +68,26 @@ class User(AbstractBaseUser, PermissionsMixin):
             'refresh': str(refresh),
             'access': str(refresh.access_token)
         }
+    
+    def resolve_and_save_country_code(self, force_update=False):
+        """
+        Resolve country code using timezone + coordinates and save it.
+        Uses existing utilities.
+        """
+        
+
+        if self.country_code and not force_update:
+            return self.country_code
+
+        code = resolve_country_code(
+            self.home_location_timezone,
+            self.home_location_coordinates
+        )
+
+        self.country_code = code
+        self.save(update_fields=["country_code"])
+
+        return code
 
     def get_calendar(self):
         """

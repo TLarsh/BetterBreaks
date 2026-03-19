@@ -47,6 +47,7 @@ def coords_to_country_code(coords: str) -> str:
         return "US"
 
 
+
 def resolve_country_code(timezone_str: str, coords: str) -> str:
     """
     Resolve the most accurate country code:
@@ -63,3 +64,50 @@ def resolve_country_code(timezone_str: str, coords: str) -> str:
         return coords_to_country_code(coords)
 
     return "US"
+
+
+
+
+
+tf = TimezoneFinder()
+
+def detect_timezone_from_coords(coords: str) -> str:
+    """
+    Convert coordinates to timezone string.
+    """
+    try:
+        if not coords:
+            return None
+
+        lat, lng = map(float, coords.split(","))
+        timezone_str = tf.timezone_at(lat=lat, lng=lng)
+
+        return timezone_str
+    except Exception:
+        return None
+    
+
+
+def update_user_location(user, timezone=None, coords=None):
+    updated = False
+
+    
+    if coords and not timezone:
+        timezone = detect_timezone_from_coords(coords)
+
+    if timezone and not user.home_location_timezone:
+        user.home_location_timezone = timezone
+        updated = True
+
+    if coords and not user.home_location_coordinates:
+        user.home_location_coordinates = coords
+        updated = True
+
+    if updated:
+        user.save(update_fields=[
+            "home_location_timezone",
+            "home_location_coordinates"
+        ])
+
+
+        user.resolve_and_save_country_code()

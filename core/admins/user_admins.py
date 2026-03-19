@@ -33,6 +33,7 @@ class UserAdmin(admin.ModelAdmin):
                     "birthday",
                     "home_location_timezone",
                     "home_location_coordinates",
+                    "country_code",
                     "working_days_per_week",
                 ]
             },

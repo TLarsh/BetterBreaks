@@ -113,12 +113,12 @@ LOGIN_REDIRECT_URL = "/api/auth/social/callback/"  # We'll handle token creation
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
-            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-            "secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+            "client_id": os.getenv("232224276055-i484g5v5ffq81lf83ub1mqu4ajq1gkrh.apps.googleusercontent.com"),
+            "secret": os.getenv("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"),
             "key": ""
         },
         "SCOPE": ["email", "profile"],
-        "AUTH_PARAMS": {"access_type": "offline"},
+        "AUTH_PARAMS": {"access_type": "online"},
     },
     "facebook": {
         "APP": {

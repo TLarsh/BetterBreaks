@@ -61,7 +61,7 @@ class BaseSocialLoginView(SocialLoginView):
                 )
 
             return error_response(
-                message="Social login failed",
+                message="Social login failed. Please try again.",
                 errors=response.data
             )
 

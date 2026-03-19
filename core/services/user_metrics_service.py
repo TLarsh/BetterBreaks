@@ -21,7 +21,7 @@ class UserMetricsService:
 
     @staticmethod
     def build(user) -> UserMetrics:
-        # print("🔁 Rebuilding metrics for:", user.id)
+        
         metrics, _ = UserMetrics.objects.get_or_create(user=user)
 
         # --------------------------------------------------
