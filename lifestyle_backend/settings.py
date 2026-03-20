@@ -35,8 +35,8 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ['lifestyle-backend-4klf.onrender.com', 'localhost', '127.0.0.1']
-# ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
+# ALLOWED_HOSTS = ['lifestyle-backend-4klf.onrender.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost").split(",")
 
 CORS_ALLOW_ALL_ORIGINS = True  # or define allowed origins specifically
 # Example: CORS_ALLOWED_ORIGINS = ['https://yourmobileapp.com']
@@ -113,8 +113,8 @@ LOGIN_REDIRECT_URL = "/api/auth/social/callback/"  # We'll handle token creation
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
-            "client_id": os.getenv("232224276055-i484g5v5ffq81lf83ub1mqu4ajq1gkrh.apps.googleusercontent.com"),
-            "secret": os.getenv("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"),
+            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+            "secret": os.getenv("GOOGLE_CLIENT_SECRET"),
             "key": ""
         },
         "SCOPE": ["email", "profile"],
