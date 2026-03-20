@@ -54,42 +54,66 @@ email_login_schema = swagger_auto_schema(
 )
 
 # ----------- GOOGLE LOGIN SCHEMA -----------
+# google_login_schema = swagger_auto_schema(
+#     operation_summary="Login with Google",
+#     operation_description=(
+#         "Authenticate a user using Google OAuth.\n"
+#         "- Provide either the `access_token` (from Google) or the `code` (OAuth authorization code).\n"
+#         "- The callback URL must match the one configured in Google Cloud Console."
+#     ),
+#     request_body=openapi.Schema(
+#         type=openapi.TYPE_OBJECT,
+#         properties={
+#             "access_token": openapi.Schema(type=openapi.TYPE_STRING, description="Google OAuth access token"),
+#             "code": openapi.Schema(type=openapi.TYPE_STRING, description="Google OAuth authorization code"),
+#         },
+#         example={
+#             "access_token": "ya29.a0AfH6SMBEXAMPLE...",
+#             "code": "4/0AX4XfWhExampleCodeFromGoogle"
+#         }
+#     ),
+#     responses={
+#         200: openapi.Response(
+#             description="Login successful",
+#             examples={
+#                 "application/json": {
+#                     "message": "Login successful",
+#                     "status": True,
+#                     "data": {
+#                         "refresh": "your_refresh_token",
+#                         "access": "your_access_token",
+#                         "email": "user@example.com",
+#                         "full_name": "John Doe"
+#                     },
+#                     "errors": None
+#                 }
+#             }
+#         )
+#     }
+# )
+
+
+
 google_login_schema = swagger_auto_schema(
-    operation_summary="Login with Google",
+    operation_summary="Login with Google (Web + Mobile)",
     operation_description=(
-        "Authenticate a user using Google OAuth.\n"
-        "- Provide either the `access_token` (from Google) or the `code` (OAuth authorization code).\n"
-        "- The callback URL must match the one configured in Google Cloud Console."
+        "Authenticate using Google.\n\n"
+        "Send ONE of:\n"
+        "- `code` → Web OAuth\n"
+        "- `access_token` → Web token\n"
+        "- `id_token` → Mobile login\n"
     ),
     request_body=openapi.Schema(
         type=openapi.TYPE_OBJECT,
         properties={
-            "access_token": openapi.Schema(type=openapi.TYPE_STRING, description="Google OAuth access token"),
-            "code": openapi.Schema(type=openapi.TYPE_STRING, description="Google OAuth authorization code"),
+            "code": openapi.Schema(type=openapi.TYPE_STRING),
+            "access_token": openapi.Schema(type=openapi.TYPE_STRING),
+            "id_token": openapi.Schema(type=openapi.TYPE_STRING),
         },
         example={
-            "access_token": "ya29.a0AfH6SMBEXAMPLE...",
-            "code": "4/0AX4XfWhExampleCodeFromGoogle"
+            "id_token": "eyJhbGciOiJSUzI1NiIs..."
         }
-    ),
-    responses={
-        200: openapi.Response(
-            description="Login successful",
-            examples={
-                "application/json": {
-                    "message": "Login successful",
-                    "status": True,
-                    "data": {
-                        "refresh": "your_refresh_token",
-                        "access": "your_access_token",
-                        "email": "user@example.com",
-                        "full_name": "John Doe"
-                    },
-                    "errors": None
-                }
-            }
-        )
-    }
+    )
 )
 
 # ----------- FACEBOOK LOGIN SCHEMA -----------

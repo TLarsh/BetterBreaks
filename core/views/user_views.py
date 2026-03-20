@@ -6,6 +6,7 @@ from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from django.contrib.auth import get_user_model
+from django.conf import settings
 from .social_base_login_views import BaseSocialLoginView
 from drf_yasg.utils import swagger_auto_schema
 
@@ -50,10 +51,14 @@ from core.models.user_models import LastLogin
 from core.utils.responses import success_response, error_response
 from ..utils.user_utils import validate_and_create_user
 import logging
+import traceback
+import requests
 
 from core.services.notification_service import NotificationService
-
-
+from core.helpers.mobile_google_login import verify_google_id_token, handle_mobile_google_login
+from dj_rest_auth.registration.views import SocialLoginView
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
 
 
 User = get_user_model()
@@ -156,13 +161,108 @@ class LoginView(APIView):
         )
 
 
-class GoogleLoginView(BaseSocialLoginView):
+# class GoogleLoginView(BaseSocialLoginView):
+#     adapter_class = GoogleOAuth2Adapter
+#     client_class = OAuth2Client
+#     @google_login_schema
+#     def post(self, request, *args, **kwargs):
+#         return super().post(request, *args, **kwargs)
+
+
+
+class GoogleLoginView(SocialLoginView):
+    permission_classes = [AllowAny]
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
+
     @google_login_schema
     def post(self, request, *args, **kwargs):
-        return super().post(request, *args, **kwargs)
+        try:
+            id_token_str = request.data.get("id_token")
+            code = request.data.get("code")
+            access_token = request.data.get("access_token")
 
+            # =========================
+            # 📱 MOBILE FLOW (ID TOKEN)
+            # =========================
+            if id_token_str:
+                idinfo = verify_google_id_token(id_token_str)
+
+                if not idinfo:
+                    return error_response(
+                        message="Invalid Google ID token",
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
+
+                user = handle_mobile_google_login(idinfo)
+
+                if not user:
+                    return error_response(
+                        message="User creation failed",
+                        status_code=status.HTTP_400_BAD_REQUEST
+                    )
+
+            # =========================
+            # 🌐 WEB FLOW (CODE / ACCESS TOKEN)
+            # =========================
+            elif code or access_token:
+                self.callback_url = settings.GOOGLE_CALLBACK_URL
+
+                response = super().post(request, *args, **kwargs)
+
+                if response.status_code != 200:
+                    return error_response(
+                        message="Google web login failed",
+                        errors=response.data
+                    )
+
+                user = self.serializer.validated_data["user"]
+
+            else:
+                return error_response(
+                    message="Provide id_token, code, or access_token",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+
+            # =========================
+            # 🔐 ISSUE JWT TOKENS
+            # =========================
+            refresh = RefreshToken.for_user(user)
+
+            tokens = {
+                "refresh": str(refresh),
+                "access": str(refresh.access_token),
+            }
+
+            # =========================
+            # 🧾 LOG LOGIN
+            # =========================
+            LastLogin.objects.create(
+                user=user,
+                ip_address=request.META.get("REMOTE_ADDR", ""),
+                token=tokens["access"],
+                token_valid=True,
+            )
+
+            return success_response(
+                message="Google login successful",
+                data={
+                    "refresh": tokens["refresh"],
+                    "access": tokens["access"],
+                    "email": user.email,
+                    "full_name": user.full_name,
+                    "provider": "google"
+                }
+            )
+
+        except Exception as e:
+            traceback.print_exc()
+
+            return error_response(
+                message="An unexpected error occurred.",
+                errors={"detail": str(e)},
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class FacebookLoginView(BaseSocialLoginView):
     adapter_class = FacebookOAuth2Adapter
