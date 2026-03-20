@@ -111,15 +111,15 @@ LOGIN_REDIRECT_URL = "/api/auth/social/callback/"  # We'll handle token creation
 
 # Social provider credentials (replace with your own)
 SOCIALACCOUNT_PROVIDERS = {
-    # "google": {
-    #     "APP": {
-    #         "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-    #         "secret": os.getenv("GOOGLE_CLIENT_SECRET"),
-    #         "key": ""
-    #     },
-    #     "SCOPE": ["email", "profile"],
-    #     "AUTH_PARAMS": {"access_type": "online"},
-    # },
+    "google": {
+        "APP": {
+            "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+            "secret": os.getenv("GOOGLE_CLIENT_SECRET"),
+            "key": ""
+        },
+        "SCOPE": ["email", "profile"],
+        "AUTH_PARAMS": {"access_type": "online"},
+    },
     "facebook": {
         "APP": {
             "client_id": os.getenv("FACEBOOK_APP_ID"),
