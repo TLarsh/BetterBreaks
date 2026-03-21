@@ -109,9 +109,19 @@ google_login_schema = swagger_auto_schema(
             "code": openapi.Schema(type=openapi.TYPE_STRING),
             "access_token": openapi.Schema(type=openapi.TYPE_STRING),
             "id_token": openapi.Schema(type=openapi.TYPE_STRING),
+            "timezone": openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="User timezone (e.g. Africa/Lagos)"
+            ),
+            "coordinates": openapi.Schema(
+                type=openapi.TYPE_STRING,
+                description="User coordinates in 'lat,lng' format"
+            ),
         },
         example={
-            "id_token": "eyJhbGciOiJSUzI1NiIs..."
+            "id_token": "eyJhbGciOiJSUzI1NiIs...",
+            "timezone": "Africa/Lagos",
+            "coordinates": "6.5244,3.3792"
         }
     )
 )

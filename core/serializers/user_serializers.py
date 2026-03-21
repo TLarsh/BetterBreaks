@@ -11,6 +11,7 @@ from core.utils.contry_code_resolution import update_user_location
 from django.contrib.auth.base_user import BaseUserManager
 
 
+
 # class RegisterSerializer(serializers.ModelSerializer):
 #     password = serializers.CharField(write_only=True)
 #     password_confirmation = serializers.CharField(write_only=True)
@@ -295,6 +296,7 @@ class ResetPasswordSerializer(serializers.Serializer):
 
 ######## CHANGE EMAIL and PASSWORD SERIALIZERS ##############
 
+
 class ChangeEmailSerializer(serializers.Serializer):
     new_email = serializers.EmailField()
     password = serializers.CharField(write_only=True)
@@ -314,6 +316,7 @@ class ChangeEmailSerializer(serializers.Serializer):
         user.email = self.validated_data["new_email"]
         user.save()
         return user
+
 
 # -----------------------------------------------------------------
 

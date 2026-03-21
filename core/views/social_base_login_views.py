@@ -1,19 +1,22 @@
-from rest_framework.permissions import AllowAny
 from rest_framework import status
 from dj_rest_auth.registration.views import SocialLoginView
 from ..models import LastLogin
 from ..utils.responses import success_response, error_response
-# import traceback
+from django.conf import settings
+from rest_framework.permissions import AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
+import traceback
+
 
 
 # class BaseSocialLoginView(SocialLoginView):
-#     """
-#     Base class for social logins (Google, Facebook, Twitter).
-#     Supports both:
-#     - Code-based login (requires callback_url)
-#     - Token-based login (no callback_url required)
-#     Also logs last login like LoginView.
-#     """
+    # """
+    # Base class for social logins (Google, Facebook, Twitter).
+    # Supports both:
+    # - Code-based login (requires callback_url)
+    # - Token-based login (no callback_url required)
+    # Also logs last login like LoginView.
+    # """
 
 #     permission_classes = [AllowAny]
 #     callback_url = None  # Will be set dynamically if needed
@@ -75,14 +78,15 @@ from ..utils.responses import success_response, error_response
 
 
 
-from django.conf import settings
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from rest_framework_simplejwt.tokens import RefreshToken
-import traceback
-
 
 class BaseSocialLoginView(SocialLoginView):
+    """
+    Base class for social logins (Google, Facebook, Twitter).
+    Supports both:
+    - Code-based login (requires callback_url)
+    - Token-based login (no callback_url required)
+    Also logs last login like LoginView.
+    """
     permission_classes = [AllowAny]
     callback_url = None
 

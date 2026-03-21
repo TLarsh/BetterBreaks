@@ -18,7 +18,7 @@ from ..models.break_models import BreakPlan
 from dateutil.parser import isoparse as date_parser
 from django.contrib.auth.password_validation import validate_password
 from core.tasks.holiday_tasks import sync_user_holidays
-from ..utils.contry_code_resolution import timezone_to_country_code
+from ..utils.contry_code_resolution import timezone_to_country_code, update_user_location
 from django.utils import timezone
 
 
@@ -165,107 +165,6 @@ class LoginView(APIView):
 
 
 
-# class GoogleLoginView(SocialLoginView):
-#     permission_classes = [AllowAny]
-#     adapter_class = GoogleOAuth2Adapter
-#     client_class = OAuth2Client
-
-#     @google_login_schema
-#     def post(self, request, *args, **kwargs):
-#         try:
-#             id_token_str = request.data.get("id_token")
-#             code = request.data.get("code")
-#             access_token = request.data.get("access_token")
-
-#             # =========================
-#             # 📱 MOBILE FLOW (ID TOKEN)
-#             # =========================
-#             if id_token_str:
-                
-#                 # idinfo = verify_google_id_token(id_token_str)
-#                 token = id_token_str
-#                 from core.helpers.mobile_google_login import debug_google_id_token
-#                 debug_google_id_token(token)
-
-#                 # if not idinfo:
-#                 #     return error_response(
-#                 #         message="Invalid Google ID token",
-#                 #         status_code=status.HTTP_400_BAD_REQUEST
-#                 #     )
-
-#                 # user = handle_mobile_google_login(idinfo)
-
-#                 if not user:
-#                     return error_response(
-#                         message="User creation failed",
-#                         status_code=status.HTTP_400_BAD_REQUEST
-#                     )
-
-#             # =========================
-#             # 🌐 WEB FLOW (CODE / ACCESS TOKEN)
-#             # =========================
-#             elif code or access_token:
-#                 self.callback_url = settings.GOOGLE_CALLBACK_URL
-
-#                 response = super().post(request, *args, **kwargs)
-
-#                 if response.status_code != 200:
-#                     return error_response(
-#                         message="Google web login failed",
-#                         errors=response.data
-#                     )
-
-#                 user = self.serializer.validated_data["user"]
-
-#             else:
-#                 return error_response(
-#                     message="Provide id_token, code, or access_token",
-#                     status_code=status.HTTP_400_BAD_REQUEST
-#                 )
-
-#             # =========================
-#             # 🔐 ISSUE JWT TOKENS
-#             # =========================
-#             refresh = RefreshToken.for_user(user)
-
-#             tokens = {
-#                 "refresh": str(refresh),
-#                 "access": str(refresh.access_token),
-#             }
-
-#             # =========================
-#             # 🧾 LOG LOGIN
-#             # =========================
-#             LastLogin.objects.create(
-#                 user=user,
-#                 ip_address=request.META.get("REMOTE_ADDR", ""),
-#                 token=tokens["access"],
-#                 token_valid=True,
-#             )
-
-#             return success_response(
-#                 message="Google login successful",
-#                 data={
-#                     "refresh": tokens["refresh"],
-#                     "access": tokens["access"],
-#                     "email": user.email,
-#                     "full_name": user.full_name,
-#                     "provider": "google"
-#                 }
-#             )
-
-#         except Exception as e:
-#             traceback.print_exc()
-
-#             return error_response(
-#                 message="An unexpected error occurred.",
-#                 errors={"detail": str(e)},
-#                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
-#             )
-             
-
-
-
 class GoogleLoginView(SocialLoginView):
     permission_classes = [AllowAny]
     adapter_class = GoogleOAuth2Adapter
@@ -277,9 +176,11 @@ class GoogleLoginView(SocialLoginView):
             id_token_str = request.data.get("id_token")
             code = request.data.get("code")
             access_token = request.data.get("access_token")
+            timezone = request.data.get("timezone")
+            coords = request.data.get("coordinates")
 
             # =========================
-            # 📱 MOBILE FLOW (ID TOKEN)
+            #  MOBILE FLOW (ID TOKEN)
             # =========================
             if id_token_str:
                 # idinfo = verify_google_id_token(id_token_str)
@@ -292,6 +193,7 @@ class GoogleLoginView(SocialLoginView):
                     )
 
                 user = handle_mobile_google_login(idinfo)
+                update_user_location(user, timezone=timezone, coords=coords)
 
                 if not user:
                     return error_response(
@@ -300,7 +202,7 @@ class GoogleLoginView(SocialLoginView):
                     )
 
             # =========================
-            # 🌐 WEB FLOW (CODE / ACCESS TOKEN)
+            # WEB FLOW (CODE / ACCESS TOKEN)
             # =========================
             elif code or access_token:
                 self.callback_url = settings.GOOGLE_CALLBACK_URL
@@ -322,7 +224,7 @@ class GoogleLoginView(SocialLoginView):
                 )
 
             # =========================
-            # 🔐 ISSUE JWT TOKENS
+            # ISSUE JWT TOKENS
             # =========================
             refresh = RefreshToken.for_user(user)
 
@@ -332,7 +234,7 @@ class GoogleLoginView(SocialLoginView):
             }
 
             # =========================
-            # 🧾 LOG LOGIN
+            # LOG LOGIN
             # =========================
             LastLogin.objects.create(
                 user=user,
