@@ -8,11 +8,13 @@ def verify_google_id_token(id_token_str):
     try:
         idinfo = id_token.verify_oauth2_token(
             id_token_str,
-            google_requests.Request(),
-            settings.GOOGLE_CLIENT_ID  # MUST be WEB client ID
+            requests.Request(),  # ensure correct request
+            settings.GOOGLE_CLIENT_ID
         )
+        print("✅ Verified! ID info:", idinfo)
         return idinfo
-    except Exception:
+    except ValueError as e:
+        print("❌ Verification failed:", e)
         return None
     
 
@@ -42,3 +44,42 @@ def handle_mobile_google_login(idinfo):
     )
 
     return user
+
+
+
+import base64
+import json
+from google.oauth2 import id_token
+from google.auth.transport import requests
+from django.conf import settings
+
+def debug_google_id_token(id_token_str):
+    print("\n=== Received ID Token ===")
+    print(id_token_str)
+
+    # Step 1: Decode payload without verification
+    try:
+        payload_b64 = id_token_str.split('.')[1] + '=='
+        decoded = json.loads(base64.urlsafe_b64decode(payload_b64))
+        print("\n=== Decoded Token Payload ===")
+        print(json.dumps(decoded, indent=2))
+    except Exception as e:
+        print("❌ Failed to decode token payload:", str(e))
+        return None
+
+    # Step 2: Verify with google-auth
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            id_token_str,
+            requests.Request(),
+            settings.GOOGLE_CLIENT_ID  # MUST be your web client ID
+        )
+        print("\n✅ Token verified successfully!")
+        print(json.dumps(idinfo, indent=2))
+        return idinfo
+    except ValueError as e:
+        print("\n❌ Verification failed:", str(e))
+        return None
+    except Exception as e:
+        print("\n❌ Unexpected error during verification:", str(e))
+        return None

@@ -108,9 +108,10 @@ ACCOUNT_SESSION_REMEMBER = False
 # Redirect URL (used by Allauth after social login callback)
 # Since you have no web frontend, we use API redirect
 LOGIN_REDIRECT_URL = "/api/auth/social/callback/"  # We'll handle token creation here
-GOOGLE_CALLBACK_URL = "http://localhost:8000/auth/social/callback/"
+GOOGLE_CALLBACK_URL = "http://localhost:8000/api/auth/social/callback/"
 
 # Social provider credentials (replace with your own)
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "APP": {
