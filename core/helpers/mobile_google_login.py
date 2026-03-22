@@ -11,7 +11,7 @@ def verify_google_id_token(id_token_str):
     try:
         idinfo = id_token.verify_oauth2_token(
             id_token_str,
-            requests.Request(),  # ensure correct request
+            requests.Request(),
             settings.GOOGLE_CLIENT_ID
         )
         print("Verified! ID info:", idinfo)

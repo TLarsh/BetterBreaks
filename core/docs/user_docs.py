@@ -126,6 +126,33 @@ google_login_schema = swagger_auto_schema(
     )
 )
 
+# ----------- apple LOGIN SCHEMA -----------
+apple_login_schema = swagger_auto_schema(
+    operation_summary="Login with Apple (iOS + Web)",
+    operation_description=(
+        "Authenticate using Apple Sign-In.\n\n"
+        "Send ONE of:\n"
+        "- `code` → Web OAuth\n"
+        "- `id_token` → Mobile login\n"
+    ),
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            "code": openapi.Schema(type=openapi.TYPE_STRING),
+            "id_token": openapi.Schema(type=openapi.TYPE_STRING),
+            "timezone": openapi.Schema(type=openapi.TYPE_STRING),
+            "coordinates": openapi.Schema(type=openapi.TYPE_STRING),
+            "first_name": openapi.Schema(type=openapi.TYPE_STRING),
+            "last_name": openapi.Schema(type=openapi.TYPE_STRING),
+        },
+        example={
+            "id_token": "eyJraWQiOiJ...",
+            "timezone": "Africa/Lagos",
+            "coordinates": "6.5244,3.3792"
+        }
+    )
+)
+
 # ----------- FACEBOOK LOGIN SCHEMA -----------
 facebook_login_schema = swagger_auto_schema(
     operation_summary="Login with Facebook",

@@ -90,9 +90,25 @@ class BaseSocialLoginView(SocialLoginView):
     permission_classes = [AllowAny]
     callback_url = None
 
+    # def get_callback_url(self):
+    #     if "code" in self.request.data:
+    #         return settings.GOOGLE_CALLBACK_URL
+    #     return None
+
     def get_callback_url(self):
-        if "code" in self.request.data:
-            return settings.GOOGLE_CALLBACK_URL
+        provider = self.adapter_class.provider_id.upper()
+        return getattr(settings, f"{provider}_CALLBACK_URL", None)
+
+
+    def get_flow_type(self):
+        data = self.request.data
+    
+        if "id_token" in data:
+            return "id_token"
+        elif "code" in data:
+            return "code"
+        elif "access_token" in data:
+            return "token"
         return None
 
     def post(self, request, *args, **kwargs):
