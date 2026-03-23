@@ -56,8 +56,6 @@ google-cloud-storage==3.4.1
 google-crc32c==1.8.0
 google-resumable-media==2.8.0
 googleapis-common-protos==1.70.0
-grpcio==1.78.0
-grpcio-status==1.78.0
 gunicorn==23.0.0
 h11==0.16.0
 h2==4.3.0
@@ -101,7 +99,7 @@ platformdirs==4.3.6
 plotly==6.5.0
 prompt_toolkit==3.0.50
 proto-plus==1.26.1
-protobuf==6.33.5
+protobuf==6.33.6
 psutil==7.0.0
 psycopg2-binary==2.9.10
 ptyprocess==0.7.0
@@ -137,7 +135,7 @@ social-auth-app-django==5.5.1
 social-auth-core==4.7.0
 sqlparse==0.5.3
 stack-data==0.6.3
-streamlit==1.44.1
+streamlit==1.55.0
 streamlit-option-menu==0.4.0
 tenacity==9.1.2
 threadpoolctl==3.6.0
