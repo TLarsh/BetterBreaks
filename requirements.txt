@@ -113,7 +113,7 @@ pycountry==24.6.1
 pycparser==2.22
 pydeck==0.9.1
 Pygments==2.19.1
-PyJWT==2.12.1
+PyJWT==2.9.0
 pyparsing==3.2.3
 python-dateutil==2.9.0.post0
 python-dotenv==1.1.1
