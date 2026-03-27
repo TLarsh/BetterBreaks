@@ -248,7 +248,7 @@ class HolidayView(APIView):
         user = request.user
 
         # Ensure user has a country code
-        country_code = user.resolve_and_save_country_code()
+        country_code = user.country_code
 
         calendar = getattr(user, "holiday_calendar", None)
 
@@ -277,7 +277,7 @@ class HolidayView(APIView):
         """
         user = request.user
 
-        country_code = user.resolve_and_save_country_code()
+        country_code = user.country_code
 
 
         calendar = user.get_calendar()
@@ -331,7 +331,7 @@ class FetchPublicHolidaysView(APIView):
         user = request.user
 
         
-        country_code = user.resolve_and_save_country_code()
+        country_code = user.country_code
 
         if not country_code:
             return Response(

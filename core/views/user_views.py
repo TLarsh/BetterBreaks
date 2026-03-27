@@ -80,6 +80,7 @@ class RegisterView(APIView):
     def post(self, request):
         try:
             user = validate_and_create_user(request.data)
+            # update_user_location(user, timezone=timezone, coords=coords)
 
             NotificationService.notify(
             user=user,
@@ -192,6 +193,7 @@ class GoogleLoginView(SocialLoginView):
                 if not idinfo:
                     return error_response(
                         message="Invalid Google ID token",
+                        errors={"id_token": "Verification failed"},
                         status_code=status.HTTP_400_BAD_REQUEST
                     )
 

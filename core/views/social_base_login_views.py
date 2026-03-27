@@ -102,7 +102,7 @@ class BaseSocialLoginView(SocialLoginView):
 
     def get_flow_type(self):
         data = self.request.data
-    
+
         if "id_token" in data:
             return "id_token"
         elif "code" in data:
@@ -150,6 +150,8 @@ class BaseSocialLoginView(SocialLoginView):
             )
 
         except Exception as e:
+            import logging
+            logging.exception("Social login error")
             return error_response(
                 message="An unexpected error occurred.",
                 errors={"detail": str(e)},
