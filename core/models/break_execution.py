@@ -26,7 +26,9 @@ class BreakExecution(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="recommended")
 
     optimisation_score = models.FloatField(default=0)
+    # processed_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
+    processed_at = models.DateTimeField(auto_now_add=True)
 
     def duration(self):
         if self.actual_start and self.actual_end:

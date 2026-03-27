@@ -57,10 +57,10 @@ def process_break_completion_async(self, break_execution_id):
         return f"Break {break_exec.id} ignored (status={break_exec.status})"
 
     with transaction.atomic():
-        # 1️⃣ Core scoring + streaks + optimization
+        # 1️ Core scoring + streaks + optimization
         BreakLifecycleService.process_break_completion(break_exec)
 
-        # 2️⃣ Rebuild metrics (stress, sleep, work hours)
+        # 2️ Rebuild metrics (stress, sleep, work hours)
         UserMetricsService.build(break_exec.user)
 
     return f"Break {break_exec.id} processed successfully"
