@@ -1,6 +1,7 @@
 from django.urls import path
 from ..views.user_views import (
     RegisterView,
+    VerifyEmailView,
     LoginView,
     LogoutView,
     RequestOTPView, VerifyOTPView,
@@ -11,8 +12,9 @@ from ..views.user_views import (
     UpdateProfileView,
     GoogleLoginView, FacebookLoginView, TwitterLoginView,
 )
-from rest_framework_simplejwt.views import TokenRefreshView
 
+
+from rest_framework_simplejwt.views import TokenRefreshView
 
 
 urlpatterns = [
@@ -21,6 +23,7 @@ urlpatterns = [
     path('api/profile/get/', ProfileView.as_view(), name='profile'),
     path('api/profile/update/', UpdateProfileView.as_view(), name='update_profile'),
     path('api/auth/register/', RegisterView.as_view(), name='register'),  # Ensure 'register' matches test
+    path("api/auth/verify-email/", VerifyEmailView.as_view(), name="verify-email"),
     path('api/auth/login/', LoginView.as_view(), name='login'),          # Ensure 'login' matches test
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),      # Ensure 'logout' matches test
     path('api/auth/request-reset/', RequestOTPView.as_view()),

@@ -17,9 +17,11 @@ from ..models.break_models import BreakPlan
 
 from dateutil.parser import isoparse as date_parser
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
 from core.tasks.holiday_tasks import sync_user_holidays
-from ..utils.contry_code_resolution import timezone_to_country_code, update_user_location
 from django.utils import timezone
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 
 
 # =======SOCIAL ALLAUTH ACCOUNT PROVIDERS=====
@@ -38,6 +40,7 @@ from core.docs.user_docs import (
     twitter_login_schema,
     email_login_schema,
     apple_login_schema,
+    verify_email_schema,
 )
 from core.serializers.user_serializers import (
     RegisterSerializer,
@@ -52,7 +55,9 @@ from core.serializers.user_serializers import (
 )
 from core.models.user_models import LastLogin
 from core.utils.responses import success_response, error_response
-from ..utils.user_utils import validate_and_create_user
+from ..utils.contry_code_resolution import timezone_to_country_code, update_user_location
+from ..utils.user_utils import validate_and_create_user, generate_verification_link
+from ..utils.email_utils import send_verification_email
 import logging
 import traceback
 import requests
@@ -80,7 +85,9 @@ class RegisterView(APIView):
     def post(self, request):
         try:
             user = validate_and_create_user(request.data)
+            verification_link = generate_verification_link(user, request)
             # update_user_location(user, timezone=timezone, coords=coords)
+            send_verification_email(user, verification_link)
 
             NotificationService.notify(
             user=user,
@@ -119,6 +126,42 @@ class RegisterView(APIView):
         except Exception as e:
             return error_response(
                 message="An unexpected error occurred during registration",
+                errors={"detail": str(e)},
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
+
+
+
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    @verify_email_schema
+    def get(self, request):
+        uid = request.GET.get("uid")
+        token = request.GET.get("token")
+
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+            user = User.objects.get(pk=user_id)
+
+            if default_token_generator.check_token(user, token):
+                user.is_verified = True
+                user.save()
+
+                return success_response(
+                    message="Email verified successfully",
+                    data={},
+                    status_code=status.HTTP_200_OK
+                )
+            else:
+                return error_response(
+                    message="Invalid or expired token",
+                    status_code=status.HTTP_400_BAD_REQUEST
+                )
+
+        except Exception as e:
+            return error_response(
+                message="Verification failed",
                 errors={"detail": str(e)},
                 status_code=status.HTTP_400_BAD_REQUEST
             )

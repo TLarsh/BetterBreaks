@@ -28,7 +28,7 @@ import traceback
 #         - If request.data has 'access_token', skip callback_url (mobile token login).
 #         """
 #         if "code" in self.request.data:
-#             # This should match the redirect URI you registered in provider dashboard
+#             
 #             return "https://localhost/auth/social/callback/"
 #         return None
 

@@ -23,6 +23,7 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password=None, full_name=None, **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
+        extra_fields.setdefault("is_verified", True)
 
         if extra_fields.get("is_staff") is not True:
             raise ValueError("Superuser must have is_staff=True.")
@@ -43,6 +44,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     country_code = models.CharField(max_length=5, null=True, blank=True)
     working_days_per_week = models.PositiveIntegerField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    is_verified = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
     is_superuser = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
@@ -98,7 +100,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
         calendar, _ = PublicHolidayCalendar.objects.get_or_create(
             user=self,
-            defaults={"country_code": "US"}
+            defaults={"country_code": self.country_code}
         )
         return calendar
 

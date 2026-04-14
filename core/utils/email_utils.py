@@ -67,10 +67,67 @@ def send_otp_email(email, otp):
 
 
 
+# def send_notification_email(email, title, message):
+#     try:
+#         brand_name = "Better Breaks"
+
+#         subject = f"{brand_name} - {title}"
+
+#         body = f"""
+#         <html>
+#             <body style="font-family: Arial, sans-serif;">
+#                 <h2 style="color:#4CAF50;">{brand_name}</h2>
+
+#                 <p>Hello,</p>
+
+#                 <p>{message}</p>
+
+#                 <hr style="margin:20px 0;" />
+
+#                 <p style="font-size:12px;color:#777;">
+#                     You are receiving this email because notifications are enabled
+#                     on your Better Breaks account.
+#                 </p>
+
+#                 <p>
+#                     <strong>{brand_name} Team</strong>
+#                 </p>
+#             </body>
+#         </html>
+#         """
+
+#         from_email = settings.EMAIL_USER
+#         to_email = email
+
+#         msg = MIMEMultipart("alternative")
+#         msg["Subject"] = subject
+#         msg["From"] = f"{brand_name} <{from_email}>"
+#         msg["To"] = to_email
+#         msg.attach(MIMEText(body, "html"))
+
+#         if getattr(settings, "EMAIL_USE_SSL", False):
+#             server = smtplib.SMTP_SSL(settings.EMAIL_HOST, settings.EMAIL_PORT)
+#         else:
+#             server = smtplib.SMTP(settings.EMAIL_HOST, settings.EMAIL_PORT)
+#             if getattr(settings, "EMAIL_USE_TLS", False):
+#                 server.starttls()
+
+#         server.login(settings.EMAIL_USER, settings.EMAIL_PASSWORD)
+#         server.sendmail(from_email, [to_email], msg.as_string())
+#         server.quit()
+
+#         return True
+
+#     except Exception as e:
+#         return False
+    
+
+
+
+
 def send_notification_email(email, title, message):
     try:
         brand_name = "Better Breaks"
-
         subject = f"{brand_name} - {title}"
 
         body = f"""
@@ -80,7 +137,7 @@ def send_notification_email(email, title, message):
 
                 <p>Hello,</p>
 
-                <p>{message}</p>
+                {message}
 
                 <hr style="margin:20px 0;" />
 
@@ -119,5 +176,30 @@ def send_notification_email(email, title, message):
         return True
 
     except Exception as e:
+        print("Email error:", str(e))
         return False
 
+
+
+def send_verification_email(user, verification_link):
+    title = "Verify Your Email"
+
+    message = f"""
+    Please verify your email by clicking the button below:
+
+    <br/><br/>
+
+    <a href="{verification_link}" 
+       style="background-color:#4CAF50;color:white;padding:10px 20px;
+              text-decoration:none;border-radius:5px;display:inline-block;">
+        Verify Email
+    </a>
+
+    <br/><br/>
+
+    If the button doesn't work, copy and paste this link into your browser:
+    <br/>
+    {verification_link}
+    """
+
+    return send_notification_email(user.email, title, message)

@@ -9,6 +9,7 @@ import random
 from core.utils.email_utils import send_otp_email 
 from core.utils.contry_code_resolution import update_user_location
 from django.contrib.auth.base_user import BaseUserManager
+from rest_framework.exceptions import AuthenticationFailed
 
 
 
@@ -77,10 +78,6 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 
 class LoginSerializer(serializers.Serializer):
-    """
-    Serializer for user login.
-    Accepts email and returns a token upon successful authentication.
-    """
     email = serializers.EmailField()
     password = serializers.CharField()
     timezone = serializers.CharField(required=False, allow_null=True, allow_blank=True)
@@ -92,15 +89,20 @@ class LoginSerializer(serializers.Serializer):
         timezone = data.get("timezone")
         coords = data.get("coordinates")
 
-        # Find user by normalized email
         user = User.objects.filter(email=email).first()
 
-        # Verify credentials
-        if user and user.check_password(password):
-            update_user_location(user, timezone=timezone, coords=coords)
-            return {"user": user}
-        else:
-            raise serializers.ValidationError({"errors": ["Incorrect email or password"]})
+        if not user or not user.check_password(password):
+            raise serializers.ValidationError(
+                {"errors": ["Incorrect email or password"]}
+            )
+
+        if not user.is_verified:
+            raise AuthenticationFailed("Please verify your email before logging in.")
+
+        
+        update_user_location(user, timezone=timezone, coords=coords)
+
+        return {"user": user}
 
 # class LoginSerializer(serializers.Serializer):
 #     """

@@ -230,3 +230,29 @@ twitter_login_schema = swagger_auto_schema(
         )
     }
 )
+
+
+verify_email_schema = swagger_auto_schema(
+        operation_summary="Verify user email",
+        operation_description="Verifies a user's email using UID and token sent via email.",
+        manual_parameters=[
+            openapi.Parameter(
+                name="uid",
+                in_=openapi.IN_QUERY,
+                description="Base64 encoded user ID",
+                type=openapi.TYPE_STRING,
+                required=True,
+            ),
+            openapi.Parameter(
+                name="token",
+                in_=openapi.IN_QUERY,
+                description="Email verification token",
+                type=openapi.TYPE_STRING,
+                required=True,
+            ),
+        ],
+        responses={
+            200: openapi.Response(description="Email verified successfully"),
+            400: openapi.Response(description="Invalid or expired token"),
+        }
+    )
