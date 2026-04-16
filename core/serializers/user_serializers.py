@@ -1,15 +1,19 @@
 from rest_framework import serializers
 from django.utils import timezone
-from django.contrib.auth import get_user_model
+# from django.contrib.auth import get_user_model
+# User = get_user_model()
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.password_validation import validate_password
 from rest_framework_simplejwt.tokens import RefreshToken, TokenError
 from core.models.user_models import PasswordResetOTP, User
 import random
-from core.utils.email_utils import send_otp_email 
 from core.utils.contry_code_resolution import update_user_location
 from django.contrib.auth.base_user import BaseUserManager
 from rest_framework.exceptions import AuthenticationFailed
+from ..services.otp_service import can_resend_otp, set_otp_cooldown
+from ..utils.email_utils import send_otp_email, send_verification_email
+from ..utils.user_utils import create_email_otp
+
 
 
 
@@ -97,7 +101,11 @@ class LoginSerializer(serializers.Serializer):
             )
 
         if not user.is_verified:
-            raise AuthenticationFailed("Please verify your email before logging in.")
+            if can_resend_otp(user):
+                otp = create_email_otp(user)
+                send_verification_email(user, otp)
+                set_otp_cooldown(user)
+            raise AuthenticationFailed("Email not verified. A new verification link has been sent.")
 
         
         update_user_location(user, timezone=timezone, coords=coords)

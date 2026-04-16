@@ -41,6 +41,7 @@ from core.docs.user_docs import (
     email_login_schema,
     apple_login_schema,
     verify_email_schema,
+    resend_verification_schema,
 )
 from core.serializers.user_serializers import (
     RegisterSerializer,
@@ -56,8 +57,9 @@ from core.serializers.user_serializers import (
 from core.models.user_models import LastLogin
 from core.utils.responses import success_response, error_response
 from ..utils.contry_code_resolution import timezone_to_country_code, update_user_location
-from ..utils.user_utils import validate_and_create_user, generate_verification_link
+from ..utils.user_utils import validate_and_create_user, create_email_otp, generate_verification_link
 from ..utils.email_utils import send_verification_email
+from ..utils.otp_utils import verify_email_otp
 import logging
 import traceback
 import requests
@@ -85,9 +87,10 @@ class RegisterView(APIView):
     def post(self, request):
         try:
             user = validate_and_create_user(request.data)
-            verification_link = generate_verification_link(user, request)
+            # verification_link = generate_verification_link(user, request)
             # update_user_location(user, timezone=timezone, coords=coords)
-            send_verification_email(user, verification_link)
+            otp = create_email_otp(user)
+            send_verification_email(user, otp)
 
             NotificationService.notify(
             user=user,
@@ -129,35 +132,44 @@ class RegisterView(APIView):
                 errors={"detail": str(e)},
                 status_code=status.HTTP_400_BAD_REQUEST
             )
-
-
+        
 
 class VerifyEmailView(APIView):
     permission_classes = [AllowAny]
 
     @verify_email_schema
-    def get(self, request):
-        uid = request.GET.get("uid")
-        token = request.GET.get("token")
+    def post(self, request):
+        email = request.data.get("email")
+        otp = request.data.get("otp")
+
+        if not email or not otp:
+            return error_response(
+                message="Email and OTP are required",
+                status_code=status.HTTP_400_BAD_REQUEST
+            )
 
         try:
-            user_id = force_str(urlsafe_base64_decode(uid))
-            user = User.objects.get(pk=user_id)
+            user = User.objects.get(email=email)
 
-            if default_token_generator.check_token(user, token):
-                user.is_verified = True
-                user.save()
+            is_valid, message = verify_email_otp(user, otp)
 
+            if is_valid:
                 return success_response(
-                    message="Email verified successfully",
+                    message=message,
                     data={},
                     status_code=status.HTTP_200_OK
                 )
             else:
                 return error_response(
-                    message="Invalid or expired token",
+                    message=message,
                     status_code=status.HTTP_400_BAD_REQUEST
                 )
+
+        except User.DoesNotExist:
+            return error_response(
+                message="User not found",
+                status_code=status.HTTP_404_NOT_FOUND
+            )
 
         except Exception as e:
             return error_response(
@@ -165,6 +177,63 @@ class VerifyEmailView(APIView):
                 errors={"detail": str(e)},
                 status_code=status.HTTP_400_BAD_REQUEST
             )
+
+
+
+# class VerifyEmailView(APIView):
+#     permission_classes = [AllowAny]
+
+#     @verify_email_schema
+#     def get(self, request):
+#         uid = request.GET.get("uid")
+#         token = request.GET.get("token")
+
+#         try:
+#             user_id = force_str(urlsafe_base64_decode(uid))
+#             user = User.objects.get(pk=user_id)
+
+#             if default_token_generator.check_token(user, token):
+#                 user.is_verified = True
+#                 user.save()
+
+#                 return success_response(
+#                     message="Email verified successfully",
+#                     data={},
+#                     status_code=status.HTTP_200_OK
+#                 )
+#             else:
+#                 return error_response(
+#                     message="Invalid or expired token",
+#                     status_code=status.HTTP_400_BAD_REQUEST
+#                 )
+
+#         except Exception as e:
+#             return error_response(
+#                 message="Verification failed",
+#                 errors={"detail": str(e)},
+#                 status_code=status.HTTP_400_BAD_REQUEST
+#             )
+
+class ResendVerificationView(APIView):
+    permission_classes = [AllowAny]
+    @resend_verification_schema
+    def post(self, request):
+        email = request.data.get("email")
+
+        user = User.objects.filter(email=email).first()
+
+        if not user:
+            return error_response(message="User not found")
+
+        if user.is_verified:
+            return success_response(message="Email already verified")
+
+        otp = create_email_otp(user)
+        send_verification_email(user, otp)
+
+        return success_response(message="Verification email sent")
+
+
 
 class LoginView(APIView):
     permission_classes = [AllowAny]

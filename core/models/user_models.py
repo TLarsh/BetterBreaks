@@ -49,6 +49,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_superuser = models.BooleanField(default=False)
     date_joined = models.DateTimeField(auto_now_add=True)
     google_oauth_token = models.CharField(max_length=255, null=True, blank=True)
+    email_otp = models.CharField(max_length=6, null=True, blank=True)
+    otp_created_at = models.DateTimeField(null=True, blank=True)
     
     # Gamification fields
     total_break_score = models.PositiveIntegerField(default=0)

@@ -181,25 +181,49 @@ def send_notification_email(email, title, message):
 
 
 
-def send_verification_email(user, verification_link):
+def send_verification_email(user, otp):
     title = "Verify Your Email"
 
     message = f"""
-    Please verify your email by clicking the button below:
+    Please verify your email using the One-Time Password (OTP) below:
 
     <br/><br/>
 
-    <a href="{verification_link}" 
-       style="background-color:#4CAF50;color:white;padding:10px 20px;
-              text-decoration:none;border-radius:5px;display:inline-block;">
-        Verify Email
-    </a>
+    <div style="font-size:24px;font-weight:bold;letter-spacing:6px;">
+        {otp}
+    </div>
 
     <br/><br/>
 
-    If the button doesn't work, copy and paste this link into your browser:
-    <br/>
-    {verification_link}
+    This code will expire in 10 minutes.
+
+    <br/><br/>
+
+    If you did not create an account, please ignore this email.
     """
 
     return send_notification_email(user.email, title, message)
+
+
+# def send_verification_email(user, verification_link):
+#     title = "Verify Your Email"
+
+#     message = f"""
+#     Please verify your email by clicking the button below:
+
+#     <br/><br/>
+
+#     <a href="{verification_link}" 
+#        style="background-color:#4CAF50;color:white;padding:10px 20px;
+#               text-decoration:none;border-radius:5px;display:inline-block;">
+#         Verify Email
+#     </a>
+
+#     <br/><br/>
+
+#     If the button doesn't work, copy and paste this link into your browser:
+#     <br/>
+#     {verification_link}
+#     """
+
+#     return send_notification_email(user.email, title, message)

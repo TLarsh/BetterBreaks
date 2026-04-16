@@ -1,12 +1,15 @@
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
-from ..serializers.user_serializers import RegisterSerializer
+
 from ..models.user_models import User
-from .validator_utils import validate_password
+from ..utils.validator_utils import validate_password
 
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
+import random
+from django.utils import timezone
+from datetime import timedelta
 
 
 
@@ -16,6 +19,7 @@ def validate_and_create_user(data):
     Raises serializers.ValidationError or DjangoValidationError on failure.
     """
 
+    from ..serializers.user_serializers import RegisterSerializer
     serializer = RegisterSerializer(data=data)
     serializer.is_valid(raise_exception=True)
 
@@ -41,6 +45,18 @@ def validate_and_create_user(data):
 
     return user
 
+def generate_otp():
+    return str(random.randint(100000, 999999))
+
+def create_email_otp(user):
+    otp = generate_otp()
+
+    user.email_otp = otp
+    user.otp_created_at = timezone.now()
+    user.save()
+
+    return otp
+
 
 
 # GENERATE VERIFICAITON LINK
@@ -50,3 +66,11 @@ def generate_verification_link(user, request):
 
     return f"{request.scheme}://{request.get_host()}/api/auth/verify-email/?uid={uid}&token={token}"
     # return f"{request.scheme}://{request.get_host()}/api/auth/verify-email/?uid={uid}&token={token}”
+
+
+
+
+
+
+
+

@@ -10,6 +10,7 @@ class UserAdmin(admin.ModelAdmin):
         "full_name",
         "email",
         "is_active",
+        "is_verified",
         "date_joined",
     )
     list_filter = ("is_active", "date_joined")
@@ -35,12 +36,13 @@ class UserAdmin(admin.ModelAdmin):
                     "home_location_coordinates",
                     "country_code",
                     "working_days_per_week",
+                    "email_otp",
                 ]
             },
         ),
         (
             "Account Status",
-            {"fields": ["is_active", "is_staff", "date_joined"]},
+            {"fields": ["is_active", "is_staff", "is_verified", "date_joined"]},
         ),
     ]
     readonly_fields = ["date_joined"]

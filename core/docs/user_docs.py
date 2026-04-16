@@ -230,29 +230,82 @@ twitter_login_schema = swagger_auto_schema(
         )
     }
 )
-
+    
 
 verify_email_schema = swagger_auto_schema(
-        operation_summary="Verify user email",
-        operation_description="Verifies a user's email using UID and token sent via email.",
-        manual_parameters=[
-            openapi.Parameter(
-                name="uid",
-                in_=openapi.IN_QUERY,
-                description="Base64 encoded user ID",
+    operation_summary="Verify a User",
+    operation_description="Verifies a user's email using the OTP sent to their email address.",
+    
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=["email", "otp"],
+        properties={
+            "email": openapi.Schema(
                 type=openapi.TYPE_STRING,
-                required=True,
+                format="email",
+                description="User email address",
+                example="user@example.com"
             ),
-            openapi.Parameter(
-                name="token",
-                in_=openapi.IN_QUERY,
-                description="Email verification token",
+            "otp": openapi.Schema(
                 type=openapi.TYPE_STRING,
-                required=True,
+                description="One-time password sent to email",
+                example="123456"
             ),
-        ],
-        responses={
-            200: openapi.Response(description="Email verified successfully"),
-            400: openapi.Response(description="Invalid or expired token"),
-        }
-    )
+        },
+    ),
+
+    responses={
+        200: openapi.Response(
+            description="Email verified successfully",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "message": openapi.Schema(type=openapi.TYPE_STRING),
+                    "data": openapi.Schema(type=openapi.TYPE_OBJECT),
+                }
+            )
+        ),
+        400: openapi.Response(
+            description="Invalid request or OTP",
+        ),
+        404: openapi.Response(
+            description="User not found",
+        ),
+    }
+)
+
+resend_verification_schema = swagger_auto_schema(
+    operation_summary="Resend verification email to verify user",
+    operation_description="Resends an email verification OTP to the user if the email is not already verified.",
+
+    request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        required=["email"],
+        properties={
+            "email": openapi.Schema(
+                type=openapi.TYPE_STRING,
+                format="email",
+                description="User email address",
+                example="user@example.com",
+            ),
+        },
+    ),
+
+    responses={
+        200: openapi.Response(
+            description="Verification email sent or already verified",
+            schema=openapi.Schema(
+                type=openapi.TYPE_OBJECT,
+                properties={
+                    "message": openapi.Schema(type=openapi.TYPE_STRING),
+                }
+            )
+        ),
+        404: openapi.Response(
+            description="User not found",
+        ),
+        400: openapi.Response(
+            description="Bad request",
+        ),
+    },
+)

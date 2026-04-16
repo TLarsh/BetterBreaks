@@ -1,7 +1,7 @@
 from django.urls import path
 from ..views.user_views import (
     RegisterView,
-    VerifyEmailView,
+    VerifyEmailView, ResendVerificationView,
     LoginView,
     LogoutView,
     RequestOTPView, VerifyOTPView,
@@ -24,6 +24,7 @@ urlpatterns = [
     path('api/profile/update/', UpdateProfileView.as_view(), name='update_profile'),
     path('api/auth/register/', RegisterView.as_view(), name='register'),  # Ensure 'register' matches test
     path("api/auth/verify-email/", VerifyEmailView.as_view(), name="verify-email"),
+    path("api/auth/resend-verification/", ResendVerificationView.as_view(), name="resend-verification"),
     path('api/auth/login/', LoginView.as_view(), name='login'),          # Ensure 'login' matches test
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),      # Ensure 'logout' matches test
     path('api/auth/request-reset/', RequestOTPView.as_view()),
