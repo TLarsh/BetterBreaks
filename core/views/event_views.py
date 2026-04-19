@@ -12,7 +12,7 @@ from ..models.booking_models import Booking
 from ..serializers.event_serializers import EventSerializer, BookingSerializer
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from ..docs.event_docs import event_list_docs, book_event_docs 
+from ..docs.event_docs import event_list_docs, create_event_docs 
   
 
 
@@ -43,17 +43,47 @@ class EventListView(APIView):
         # Filters
         title = request.query_params.get("title")
         location = request.query_params.get("location")
+        category = request.query_params.get("category")  # single
+        categories = request.query_params.getlist("categories")  # multiple
         start_date = request.query_params.get("start_date")
         end_date = request.query_params.get("end_date")
+        min_price = request.query_params.get("min_price")
+        max_price = request.query_params.get("max_price")
 
+       
         if title:
             events = events.filter(title__icontains=title)
+
+      
         if location:
             events = events.filter(location__icontains=location)
+
+        
+        if category:
+            events = events.filter(category=category.upper())
+
+       
+        if categories:
+            categories = [c.upper() for c in categories]
+            events = events.filter(category__in=categories)
+
+       
         if start_date and end_date:
-            events = events.filter(start_date__gte=start_date, end_date__lte=end_date)
+            events = events.filter(
+                start_date__gte=start_date,
+                end_date__lte=end_date
+            )
+
+      
+        if min_price and max_price:
+            events = events.filter(price__gte=min_price, price__lte=max_price)
+        elif min_price:
+            events = events.filter(price__gte=min_price)
+        elif max_price:
+            events = events.filter(price__lte=max_price)
 
         serializer = EventSerializer(events, many=True)
+
         return Response({
             "message": "Events retrieved successfully",
             "status": True,
@@ -62,18 +92,43 @@ class EventListView(APIView):
         }, status=status.HTTP_200_OK)
 
 
-class BookEventView(APIView):
+# class BookEventView(APIView):
+#     permission_classes = [IsAuthenticated]
+
+#     @book_event_docs
+#     def post(self, request, event_id):
+#         event = get_object_or_404(Event, id=event_id)
+#         booking = Booking.objects.create(user=request.user, event=event)
+#         serializer = BookingSerializer(booking)
+
+#         return Response({
+#             "message": "Event booked successfully. Proceed to payment.",
+#             "status": True,
+#             "data": serializer.data,
+#             "errors": None
+#         }, status=status.HTTP_201_CREATED)
+    
+
+class CreateEventView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @book_event_docs
-    def post(self, request, event_id):
-        event = get_object_or_404(Event, id=event_id)
-        booking = Booking.objects.create(user=request.user, event=event)
-        serializer = BookingSerializer(booking)
+    @create_event_docs
+    def post(self, request):
+        serializer = EventSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response({
+                "message": "Event creation failed.",
+                "status": False,
+                "data": None,
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        event = serializer.save()
 
         return Response({
-            "message": "Event booked successfully. Proceed to payment.",
+            "message": "Event created successfully.",
             "status": True,
-            "data": serializer.data,
+            "data": EventSerializer(event).data,
             "errors": None
         }, status=status.HTTP_201_CREATED)
