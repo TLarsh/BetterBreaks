@@ -12,6 +12,7 @@ from ..models.booking_models import Booking
 from ..serializers.event_serializers import EventSerializer, BookingSerializer
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser
 from ..docs.event_docs import event_list_docs, create_event_docs 
   
 
@@ -111,6 +112,7 @@ class EventListView(APIView):
 
 class CreateEventView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
 
     @create_event_docs
     def post(self, request):

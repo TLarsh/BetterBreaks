@@ -4,6 +4,7 @@ from core.serializers.event_serializers import EventSerializer, BookingSerialize
 
 
 create_event_docs = swagger_auto_schema(
+    # method="post",
     request_body=EventSerializer,
     responses={
         201: openapi.Response(
