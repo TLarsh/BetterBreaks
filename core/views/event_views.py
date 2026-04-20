@@ -13,7 +13,7 @@ from ..serializers.event_serializers import EventSerializer, BookingSerializer
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
-from ..docs.event_docs import event_list_docs, create_event_docs, update_event_docs, partial_update_event_docs, delete_event_docs
+from ..docs.event_docs import event_list_docs, create_event_docs, update_event_docs, partial_update_event_docs, delete_event_docs, event_detail_docs
   
 
 
@@ -206,5 +206,22 @@ class DeleteEventView(APIView):
             "message": "Event deleted successfully.",
             "status": True,
             "data": None,
+            "errors": None
+        }, status=status.HTTP_200_OK)
+    
+
+
+class EventDetailView(APIView):
+    permission_classes = [AllowAny]
+    @event_detail_docs
+    def get(self, request, pk):
+        event = get_object_or_404(Event, pk=pk)
+
+        serializer = EventSerializer(event)
+
+        return Response({
+            "message": "Event retrieved successfully.",
+            "status": True,
+            "data": serializer.data,
             "errors": None
         }, status=status.HTTP_200_OK)

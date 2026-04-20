@@ -124,6 +124,27 @@ delete_event_docs = swagger_auto_schema(
     }
 )
 
+
+event_detail_docs = swagger_auto_schema(
+    operation_description="Retrieve a single event by ID",
+    manual_parameters=[
+        openapi.Parameter(
+            "pk",
+            openapi.IN_PATH,
+            description="Event ID",
+            type=openapi.TYPE_INTEGER,
+            required=True
+        )
+    ],
+    responses={
+        200: openapi.Response(
+            description="Event retrieved successfully",
+            schema=EventSerializer
+        ),
+        404: openapi.Response(description="Event not found")
+    }
+)
+
 # ---- Bookings ----
 book_event_docs = swagger_auto_schema(
     operation_summary="Book an event",
