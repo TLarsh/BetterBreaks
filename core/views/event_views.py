@@ -13,7 +13,7 @@ from ..serializers.event_serializers import EventSerializer, BookingSerializer
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
-from ..docs.event_docs import event_list_docs, create_event_docs 
+from ..docs.event_docs import event_list_docs, create_event_docs, update_event_docs, partial_update_event_docs, delete_event_docs
   
 
 
@@ -134,3 +134,77 @@ class CreateEventView(APIView):
             "data": EventSerializer(event).data,
             "errors": None
         }, status=status.HTTP_201_CREATED)
+    
+
+
+class UpdateEventView(APIView):
+    permission_classes = [IsAuthenticated]
+    @update_event_docs
+    def put(self, request, pk):
+        event = get_object_or_404(Event, pk=pk)
+
+        serializer = EventSerializer(event, data=request.data, partial=False)
+
+        if not serializer.is_valid():
+            return Response({
+                "message": "Event update failed.",
+                "status": False,
+                "data": None,
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+
+        return Response({
+            "message": "Event updated successfully.",
+            "status": True,
+            "data": serializer.data,
+            "errors": None
+        }, status=status.HTTP_200_OK)
+    
+    @partial_update_event_docs
+    def patch(self, request, pk):
+        event = get_object_or_404(Event, pk=pk)
+
+        serializer = EventSerializer(event, data=request.data, partial=True)
+
+        if not serializer.is_valid():
+            return Response({
+                "message": "Partial update failed.",
+                "status": False,
+                "data": None,
+                "errors": serializer.errors
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer.save()
+
+        return Response({
+            "message": "Event partially updated successfully.",
+            "status": True,
+            "data": serializer.data,
+            "errors": None
+        }, status=status.HTTP_200_OK)
+
+
+class DeleteEventView(APIView):
+    permission_classes = [IsAuthenticated]
+    @delete_event_docs
+    def delete(self, request, pk):
+        event = get_object_or_404(Event, pk=pk)
+
+        if event.created_by != request.user:
+            return Response({
+                "message": "Unauthorized.",
+                "status": False,
+                "data": None,
+                "errors": {"detail": "You cannot delete this event"}
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        event.delete()
+
+        return Response({
+            "message": "Event deleted successfully.",
+            "status": True,
+            "data": None,
+            "errors": None
+        }, status=status.HTTP_200_OK)

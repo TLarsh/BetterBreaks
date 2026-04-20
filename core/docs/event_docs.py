@@ -95,6 +95,35 @@ event_list_docs = swagger_auto_schema(
     }
 )
 
+
+update_event_docs = swagger_auto_schema(
+    request_body=EventSerializer,
+    responses={
+        200: openapi.Response(
+            description="Event updated successfully",
+            schema=EventSerializer
+        )
+    }
+)
+
+partial_update_event_docs = swagger_auto_schema(
+    request_body=EventSerializer,
+    responses={
+        200: openapi.Response(
+            description="Event partially updated successfully",
+            schema=EventSerializer
+        )
+    }
+)
+
+delete_event_docs = swagger_auto_schema(
+    operation_description="Delete an event by ID",
+    responses={
+        200: openapi.Response(description="Event deleted successfully"),
+        404: openapi.Response(description="Event not found")
+    }
+)
+
 # ---- Bookings ----
 book_event_docs = swagger_auto_schema(
     operation_summary="Book an event",

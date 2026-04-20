@@ -4,8 +4,8 @@ from ..views.event_views import (
     CreateEventView,
     # BookEventView,
     # EventDetailView,
-    # EventUpdateView,
-    # EventDeleteView
+    UpdateEventView,
+    DeleteEventView
 )
 
 urlpatterns = [
@@ -13,6 +13,6 @@ urlpatterns = [
         # path("events/book", BookEventView.as_view(), name="book_event"),
         # path("events/<int:event_id>/", EventDetailView.as_view(), name="event-detail"),
         path("api/events/create/", CreateEventView.as_view(), name="create-event"),
-        # path("events/<int:event_id>/update/", EventUpdateView.as_view(), name="update-event"),
-        # path("events/<int:event_id>/delete/", EventDeleteView.as
+        path("api/events/<int:event_id>/update/", UpdateEventView.as_view(), name="update-event"),
+        path("api/events/<int:event_id>/delete/", DeleteEventView.as_view(), name="delete-event"),
 ]
