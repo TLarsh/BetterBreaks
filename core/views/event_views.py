@@ -139,6 +139,8 @@ class CreateEventView(APIView):
 
 class UpdateEventView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
     @update_event_docs
     def put(self, request, pk):
         event = get_object_or_404(Event, pk=pk)

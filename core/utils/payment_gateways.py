@@ -11,7 +11,7 @@ class PaystackGateway:
 
     @staticmethod
     def initiate_payment(booking: Booking):
-        amount_kobo = int(float(booking.event.price) * 100)  # Paystack uses kobo
+        amount_kobo = int(float(booking.event.price) * 100)
         url = f"{PaystackGateway.base_url}/transaction/initialize"
         headers = {"Authorization": f"Bearer {settings.PAYSTACK_SECRET_KEY}"}
         data = {

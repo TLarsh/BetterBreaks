@@ -347,4 +347,10 @@ SOCIALACCOUNT_APPLE_KEY_ID="<your_apple_key_id>"
 SOCIALACCOUNT_APPLE_TEAM_ID="<your_apple_team_id>"
 
 
+
+# payment
+STRIPE_SECRET_KEY = "sk_test_..."
+STRIPE_PUBLIC_KEY = "pk_test_..."
+
+
 RENDER = os.getenv("RENDER", "False") == "True"

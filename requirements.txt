@@ -56,6 +56,8 @@ google-cloud-storage==3.4.1
 google-crc32c==1.8.0
 google-resumable-media==2.8.0
 googleapis-common-protos==1.70.0
+grpcio==1.78.0
+grpcio-status==1.78.0
 gunicorn==23.0.0
 h11==0.16.0
 h2==4.3.0
@@ -137,6 +139,7 @@ sqlparse==0.5.3
 stack-data==0.6.3
 streamlit==1.55.0
 streamlit-option-menu==0.4.0
+stripe==15.0.1
 tenacity==9.1.2
 threadpoolctl==3.6.0
 timezonefinder==8.0.0

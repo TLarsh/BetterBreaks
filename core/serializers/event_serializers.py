@@ -13,6 +13,7 @@ from ..models.booking_models import Booking
 
 
 class EventSerializer(serializers.ModelSerializer):
+    image = serializers.ImageField(required=False, allow_null=True)
     category_display = serializers.CharField(
         source="get_category_display",
         read_only=True

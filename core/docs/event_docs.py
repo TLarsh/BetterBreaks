@@ -5,13 +5,24 @@ from core.serializers.event_serializers import EventSerializer, BookingSerialize
 
 create_event_docs = swagger_auto_schema(
     # method="post",
-    request_body=EventSerializer,
-    responses={
-        201: openapi.Response(
-            description="Event created successfully",
-            schema=EventSerializer
-        )
-    }
+    operation_description="Create a new event",
+    consumes=["multipart/form-data"],
+    manual_parameters=[
+        openapi.Parameter("title", openapi.IN_FORM, type=openapi.TYPE_STRING, required=True),
+        openapi.Parameter("description", openapi.IN_FORM, type=openapi.TYPE_STRING, required=True),
+        openapi.Parameter("location", openapi.IN_FORM, type=openapi.TYPE_STRING, required=True),
+        openapi.Parameter("start_date", openapi.IN_FORM, type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, required=True),
+        openapi.Parameter("end_date", openapi.IN_FORM, type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, required=True),
+        openapi.Parameter("price", openapi.IN_FORM, type=openapi.TYPE_NUMBER, required=True),
+        openapi.Parameter("category", openapi.IN_FORM, type=openapi.TYPE_STRING, required=True),
+        openapi.Parameter(
+            "image",
+            openapi.IN_FORM,
+            type=openapi.TYPE_FILE,
+            required=False
+        ),
+    ],
+    responses={201: "Event created successfully"}
 )
 
 # ---- Events ----
@@ -127,15 +138,15 @@ delete_event_docs = swagger_auto_schema(
 
 event_detail_docs = swagger_auto_schema(
     operation_description="Retrieve a single event by ID",
-    manual_parameters=[
-        openapi.Parameter(
-            "pk",
-            openapi.IN_PATH,
-            description="Event ID",
-            type=openapi.TYPE_INTEGER,
-            required=True
-        )
-    ],
+    # manual_parameters=[
+    #     openapi.Parameter(
+    #         "pk",
+    #         openapi.IN_PATH,
+    #         description="Event ID",
+    #         type=openapi.TYPE_INTEGER,
+    #         required=True
+    #     )
+    # ],
     responses={
         200: openapi.Response(
             description="Event retrieved successfully",
