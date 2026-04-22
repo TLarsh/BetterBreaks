@@ -7,10 +7,10 @@ from drf_yasg import openapi
 
 weather_forecast_params = [
     openapi.Parameter(
-        'lat', openapi.IN_QUERY, description="Latitude", type=openapi.TYPE_NUMBER, required=True
+        'lat', openapi.IN_QUERY, description="Latitude", type=openapi.TYPE_NUMBER, required=False
     ),
     openapi.Parameter(
-        'lon', openapi.IN_QUERY, description="Longitude", type=openapi.TYPE_NUMBER, required=True
+        'lon', openapi.IN_QUERY, description="Longitude", type=openapi.TYPE_NUMBER, required=False
     ),
 ]
 
