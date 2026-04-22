@@ -8,21 +8,19 @@ from ..utils.weather_utils import (
 def get_coordinates(request):
     user = request.user
 
-    if user.is_authenticated and getattr(user, "home_location_coordinates", None):
-        try:
-            lat_str, lon_str = user.home_location_coordinates.split(",")
-            lat = float(lat_str.strip())
-            lon = float(lon_str.strip())
-            return lat, lon
-        except (ValueError, AttributeError):
-            raise ValidationError("Invalid format for user's home_location_coordinates.")
-
-    # Fallback to query params
     lat = request.query_params.get("lat")
     lon = request.query_params.get("lon")
 
     if not lat or not lon:
-        raise ValidationError("lat and lon are required.")
+        if user.is_authenticated and getattr(user, "home_location_coordinates", None):
+            try:
+                lat_str, lon_str = user.home_location_coordinates.split(",")
+                lat = float(lat_str.strip())
+                lon = float(lon_str.strip())
+                return lat, lon
+            except (ValueError, AttributeError):
+                raise ValidationError("Invalid format for user's home_location_coordinates.")
+        # raise ValidationError("lat and lon are required.")
 
     try:
         return float(lat), float(lon)
