@@ -30,6 +30,7 @@ def get_coordinates(request):
         raise ValidationError("lat and lon must be valid numbers.")
 
 
+
 def get_weather_forecast(request):
     lat, lon = get_coordinates(request)
     return fetch_6day_weather_forecast_openweathermap(lat, lon)
